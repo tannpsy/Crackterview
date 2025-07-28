@@ -9,7 +9,9 @@ import Help from "./pages/Help.jsx";
 import SignUp from "./pages/SignUp.jsx";
 import ForgotPassword from "./pages/ForgotPassword.jsx";
 import NotFound from "./pages/NotFound.jsx";
-import LandingPage from "./frontend/LandingPage.jsx"
+import LandingPage from "./frontend/LandingPage.jsx";
+import Dashboard from "./pages/Dashboard.jsx";
+import CandidateTable from "./components/CandidateTable.jsx";
 
 const App = () => (
   <BrowserRouter>
@@ -22,6 +24,8 @@ const App = () => (
       <Route path="/signup" element={<SignUp />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/landing-page" element={<LandingPage />} />
+      <Route path="/dashboard" element={<Dashboard /> } />
+      <Route path="/dashboard" element={<Dashboard /> } />
       <Route path="*" element={<NotFound />} />
     </Routes>
   </BrowserRouter>

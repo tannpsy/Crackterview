@@ -1,6 +1,7 @@
 import { Header } from "../components/Header";
 import { Hero } from "../frontend/Hero";
 import { LoginForm } from "../frontend/LoginForm";
+import PartnerFooter from "../components/PartnerFooter";
 
 export default function Index() {
   return (
@@ -26,6 +27,7 @@ export default function Index() {
           </div>
         </div>
       </main>
+      <PartnerFooter></PartnerFooter>
     </div>
   );
 }
