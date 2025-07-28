@@ -21,6 +21,15 @@ export default {
         'crackterview-light-blue': '#0F3DDE',
         'crackterview-gray': '#5A5A5D',
       },
+      keyframes: {
+        scroll: {
+          '0%': { transform: 'translateX(0%)' },
+          '100%': { transform: 'translateX(-50%)' },
+        },
+      },
+      animation: {
+        'logo-scroll': 'scroll 20s linear infinite',
+      },
     },
   },
   plugins: [],
