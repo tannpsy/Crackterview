@@ -1,6 +1,6 @@
 import { Header } from "../components/Header";
-import { Hero } from "../components/Hero";
-import { SignUpForm } from "../components/SignUpForm";
+import { Hero } from "../frontend/Hero";
+import { SignUpForm } from "../frontend/SignUpForm";
 
 export default function SignUp() {
   return (

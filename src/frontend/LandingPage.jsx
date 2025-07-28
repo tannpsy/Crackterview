@@ -1,9 +1,9 @@
 import React from "react";
 import { Header } from "../components/Header";
-import { HeroLanding } from "../frontend/HeroLanding";
+import { HeroLanding } from "./HeroLanding";
 import Features from "../pages/Features";
 
-export default function About() {
+export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white">
         <Header></Header>

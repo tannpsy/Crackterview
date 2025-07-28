@@ -1,6 +1,6 @@
 import { Header } from "../components/Header";
-import { Hero } from "../components/Hero";
-import { LoginForm } from "../components/LoginForm";
+import { Hero } from "../frontend/Hero";
+import { LoginForm } from "../frontend/LoginForm";
 
 export default function Index() {
   return (

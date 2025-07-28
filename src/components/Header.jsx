@@ -20,7 +20,7 @@ export function Header() {
           <Link
             to="/"
             className="font-league-spartan text-5xl leading-tight text-crackterview-black font-bold"
-            style={{ lineHeight: '1' }} // 👈 or adjust with Tailwind `leading-none`
+            style={{ lineHeight: '1' }} 
           >
             Crackterview
           </Link>
@@ -29,7 +29,7 @@ export function Header() {
         {/* Right Nav */}
         <div className="hidden lg:flex items-center space-x-8">
           <Link to="/demo" className="text-xl font-lato text-crackterview-black hover:text-crackterview-blue transition-colors mr-6">
-            Schedule a Demo
+            Dashboard
           </Link>
           <div className="flex items-center space-x-4 mr-6">
             <span className="text-base font-lato text-crackterview-gray">EN</span>
