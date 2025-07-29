@@ -1,6 +1,6 @@
 import { Header } from "../components/Header";
 import { Hero } from "../frontend/Hero";
-import { LoginForm } from "../frontend/LoginForm";
+import LoginForm  from "../frontend/LoginForm";
 import PartnerFooter from "../components/PartnerFooter";
 
 export default function Index() {

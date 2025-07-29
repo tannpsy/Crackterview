@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
-export function SignUpForm() {
+export default function SignUpForm() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -19,10 +19,43 @@ export function SignUpForm() {
     }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    console.log("Sign up attempt:", formData);
-  };
+const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  if (!formData.agreeToTerms) {
+    alert("You must agree to the terms.");
+    return;
+  }
+
+  if (formData.password !== formData.repeatPassword) {
+    alert("Passwords do not match.");
+    return;
+  }
+
+  try {
+    const res = await fetch("/api/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+        registerType: "normal",
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.error || "Sign up failed");
+    }
+
+    alert("Registration successful!");
+    // Optionally redirect or clear form
+  } catch (err) {
+    alert(err.message);
+  }
+};
 
   return (
     <div className="w-full max-w-md bg-white p-6 lg:p-8">

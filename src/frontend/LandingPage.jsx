@@ -1,6 +1,6 @@
 import React from "react";
 import { Header } from "../components/Header";
-import { HeroLanding } from "./HeroLanding";
+import  HeroLanding  from "./HeroLanding";
 import Features from "../pages/Features";
 import PartnerFooter from "../components/PartnerFooter";
 

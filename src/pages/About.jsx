@@ -1,6 +1,6 @@
 import React from "react";
 import { Header } from "../components/Header";
-import { HeroLanding } from "../frontend/HeroLanding";
+import HeroLanding from "../frontend/HeroLanding";
 import Features from "../pages/Features";
 
 export default function About() {

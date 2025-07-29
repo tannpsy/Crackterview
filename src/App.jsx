@@ -11,17 +11,19 @@ import ForgotPassword from "./pages/ForgotPassword.jsx";
 import NotFound from "./pages/NotFound.jsx";
 import LandingPage from "./frontend/LandingPage.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
+import GoogleSuccess from "./pages/GoogleSuccess.jsx";
 
 const App = () => (
   <BrowserRouter>
     <Routes>
       <Route path="/" element={<Index />} />
-      <Route path="/about" element={<LandingPage />} />
+      <Route path="/about" element={<About />} />
       <Route path="/features" element={<Features />} />
       <Route path="/demo" element={<Demo />} />
       <Route path="/help" element={<Help />} />
       <Route path="/signup" element={<SignUp />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/auth/callback" element={<GoogleSuccess />} />
       <Route path="/landing-page" element={<LandingPage />} />
       <Route path="/dashboard" element={<Dashboard /> } />
       <Route path="*" element={<NotFound />} />

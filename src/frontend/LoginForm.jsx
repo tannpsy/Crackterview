@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
-export function LoginForm() {
+export default function LoginForm() {
   const [formData, setFormData] = useState({
     username: "",
     email: "",
@@ -17,10 +17,40 @@ export function LoginForm() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Login attempt:", formData);
+
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Login failed");
+      }
+
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+
+      alert("Login successful!");
+      // Redirect to dashboard or home page
+      // e.g., navigate("/dashboard"); if using useNavigate from react-router
+    } catch (err) {
+      alert(err.message);
+    }
   };
+
+  const handleGoogleLogin = () => {
+    window.location.href = "http://localhost:5000/auth/login/google";
+    };
+
 
   return (
     <div className="w-full max-w-md bg-white p-6 lg:p-8">
@@ -126,6 +156,7 @@ export function LoginForm() {
           <button
             type="button"
             className="w-full flex items-center justify-center space-x-3 py-3 px-5 border border-crackterview-muted rounded-lg hover:bg-gray-50 transition-colors duration-200"
+            onClick={handleGoogleLogin}
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
               <path d="M21.8055 10.0415H21V10H12V14H17.6515C16.827 16.3285 14.6115 18 12 18C8.6865 18 6 15.3135 6 12C6 8.6865 8.6865 6 12 6C13.5295 6 14.921 6.577 15.9805 7.5195L18.809 4.691C17.023 3.0265 14.634 2 12 2C6.4775 2 2 6.4775 2 12C2 17.5225 6.4775 22 12 22C17.5225 22 22 17.5225 22 12C22 11.3295 21.931 10.675 21.8055 10.0415Z" fill="#FFC107"/>

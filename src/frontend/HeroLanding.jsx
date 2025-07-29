@@ -1,6 +1,6 @@
 import { ChevronDown } from "lucide-react";
 
-export function HeroLanding() {
+export default function HeroLanding() {
   return (
     <div className="flex-1 flex flex-col justify-center items-center px-0 lg:px-4 py-12 lg:py-0 mt-10">
         {/* Main Tagline */}
