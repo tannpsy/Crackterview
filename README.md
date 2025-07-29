@@ -34,8 +34,6 @@ This platform is built for **Recruiters & Industries** and aims to:
 
 ---
 
----
-
 ## 👥 Team & Responsibilities
 
 | Name                   | Role(s)                                         |
