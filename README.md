@@ -1,12 +1,57 @@
-# React + Vite
+# Crackterview - AI Powered Interview Platform
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+An **AI-powered interview platform** designed to simulate real job interviews, assess candidate profiles, and provide real-time feedback — supporting HR departments in making informed decisions aligned with modern industry hiring standards.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🌟 Overview
 
-## Expanding the ESLint configuration
+This platform is built for **Recruiters & Industries** and aims to:
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+-  **Pre-screen candidates** more efficiently using unbiased, scalable evaluations.
+-  **Reduce time-to-hire** and improve candidate-role fit, especially in high-volume environments.
+-  **Build a future-ready workforce** aligned with digital transformation and AI adoption.
+
+
+---
+
+## 💡 Key Features
+
+| Feature                     | Description                                                                                         | Benefits                                                                                                 |
+|----------------------------|-----------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------|
+| **One-way Interview Video Call** | Automated interview questions shown when a candidate applies.                                      | • Prevents interviewer fatigue bias  <br> • Enables asynchronous interviews                               |
+| **AI Voice-to-Text Transcript**  | Transcribes interviews and highlights key answers.                                                 | • Saves time from manual note-taking <br> • Helps recall specific responses                               |
+| **AI Interview Evaluation**      | Evaluates transcripts using AI to assess role fit.                                                 | • Speeds up hiring decisions <br> • Assists recruiters with structured, consistent evaluations            |
+
+<p align="center">
+  <img src="./assets/features.png" alt="Platform Features" width="800"/>
+</p>
+
+---
+
+## 🧰 Tech Stack
+
+- **Frontend**: Vite React.js, Tailwind CSS  
+- **Backend**: Node.js, Express.js, MongoDB (Database)
+- **Authentication**: Google Auth 
+- **AI Integration**: Voice to Text using Gemini
+
+---
+
+---
+
+## 👥 Team & Responsibilities
+
+| Name                   | Role(s)                                         |
+|------------------------|-------------------------------------------------|
+| **Giovaldi Ramadhan**  | 🧭 Project Manager & Fullstack Engineer         |
+| **Frensen Salim**      | 🎨 UI/UX Designer                               |
+| **Dhruv Menghani**     | ☁️ Cloud Engineer & Front End Engineer         |
+| **Intan Kumala Pasya** | 💻 Front End Engineer                           |
+| **Davina Amarina**     | 🛠️ Back End Engineer                            |
+
+---
+
+
+
+
