@@ -11,6 +11,7 @@ import ForgotPassword from "./pages/ForgotPassword.jsx";
 import NotFound from "./pages/NotFound.jsx";
 import LandingPage from "./frontend/LandingPage.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
+import AddCandidateForm from "./frontend/AddCandidate.jsx";
 
 const App = () => (
   <BrowserRouter>
@@ -24,6 +25,7 @@ const App = () => (
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/landing-page" element={<LandingPage />} />
       <Route path="/dashboard" element={<Dashboard /> } />
+      <Route path="/add-candidate" element={<AddCandidateForm /> } />
       <Route path="*" element={<NotFound />} />
     </Routes>
   </BrowserRouter>
