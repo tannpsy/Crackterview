@@ -23,10 +23,6 @@ This platform is built for **Recruiters & Industries** and aims to:
 | **AI Voice-to-Text Transcript**  | Transcribes interviews and highlights key answers.                                                 | • Saves time from manual note-taking <br> • Helps recall specific responses                               |
 | **AI Interview Evaluation**      | Evaluates transcripts using AI to assess role fit.                                                 | • Speeds up hiring decisions <br> • Assists recruiters with structured, consistent evaluations            |
 
-<p align="center">
-  <img src="./assets/features.png" alt="Platform Features" width="800"/>
-</p>
-
 ---
 
 ## 🧰 Tech Stack
