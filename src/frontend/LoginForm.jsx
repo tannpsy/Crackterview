@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 export default function LoginForm() {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     username: "",
     email: "",
@@ -40,16 +41,16 @@ export default function LoginForm() {
       localStorage.setItem("user", JSON.stringify(data.user));
 
       alert("Login successful!");
-      // Redirect to dashboard or home page
-      // e.g., navigate("/dashboard"); if using useNavigate from react-router
+      navigate("/dashboard");
     } catch (err) {
       alert(err.message);
     }
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = "http://localhost:5000/auth/login/google";
-    };
+    window.location.href = "http://localhost:5000/api/auth/login/google"; 
+  };
+
 
 
   return (

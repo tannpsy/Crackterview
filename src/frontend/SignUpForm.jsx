@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 export default function SignUpForm() {
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -51,10 +53,11 @@ const handleSubmit = async (e) => {
     }
 
     alert("Registration successful!");
-    // Optionally redirect or clear form
+    navigate("/dashboard");
   } catch (err) {
     alert(err.message);
   }
+
 };
 
   return (

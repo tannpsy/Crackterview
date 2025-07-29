@@ -1,5 +1,7 @@
 import React from "react";
 import DashboardHeader from "../components/HeaderDashboard";
+import { useState } from "react";
+import AddCandidateForm from "../frontend/AddCandidate";
 
 const stats = [
   {
@@ -25,6 +27,7 @@ const stats = [
 ];
 
 export default function Dashboard() {
+  const [showForm, setShowForm] = useState(false);
   return (
     <div className="w-full max-w-[1315px] mx-auto">
       <DashboardHeader />
@@ -81,16 +84,25 @@ export default function Dashboard() {
               placeholder="Search Candidates"
               className="w-full pl-10 pr-10 py-2 rounded-full border border-gray-300 focus:outline-none"
             />
-            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">🔍</span>
+            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></span>
             <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 cursor-pointer">✕</span>
           </div>
 
           <div className="flex flex-wrap gap-2 justify-end">
             <button className="px-4 py-2 rounded-full border text-[#1976D2] border-[#1976D2] text-sm">⬇ Download</button>
             <button className="px-4 py-2 rounded-full border text-gray-500 border-gray-300 text-sm">⬆ Import</button>
-            <button className="px-4 py-2 rounded-full bg-[#1976D2] text-white text-sm">➕ Add Candidates</button>
+            <button className="px-4 py-2 rounded-full bg-[#1976D2] text-white text-sm" onClick={() => setShowForm(true)}>
+                ➕ Add Candidates
+            </button>
             <button className="px-4 py-2 rounded-full border text-gray-500 border-gray-300 text-sm">🧃 Filter Candidates</button>
           </div>
+          {showForm && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+              <div className="relative">
+                <AddCandidateForm onClose={() => setShowForm(false)} />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Table */}
@@ -208,7 +220,6 @@ export default function Dashboard() {
           <span className="cursor-pointer hover:underline">Next →</span>
         </div>
       </div>
-      {/* --- END CANDIDATE TABLE --- */}
     </div>
   );
 }

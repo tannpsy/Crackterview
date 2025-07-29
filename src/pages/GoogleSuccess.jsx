@@ -12,7 +12,7 @@ const GoogleSuccess = () => {
         if (token) {
             localStorage.setItem('jwtToken', token);
             checkAuthStatus(); 
-            navigate('/posts');
+            navigate('/dashboard');
         } else {
             navigate('/login');
         }

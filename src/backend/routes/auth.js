@@ -111,7 +111,7 @@ router.get("/login/google/callback",
                 secure: process.env.NODE_ENV === 'production',
                 maxAge: 30 * 24 * 60 * 60 * 1000
             });
-            res.redirect(process.env.FRONTEND_URL || '/dashboard');
+             res.redirect(`http://localhost:5173/google-success?token=${token}`);
         } else {
             res.redirect('/login?error=google_callback_failed');
         }

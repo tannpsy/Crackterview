@@ -64,10 +64,10 @@ passport.use(
     })
 );
 
-const googleOption = {
+export const googleOption = {
     clientID: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_SECRET,
-    callbackURL: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:5000/auth/login/google/callback'
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:5000/api/auth/login/google/callback'
 }
 
 passport.use(

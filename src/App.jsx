@@ -1,6 +1,7 @@
 import "./index.css";
 
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "./frontend/context/AuthContext.jsx";
 import Index from "./pages/Index.jsx";
 import About from "./pages/About.jsx";
 import Features from "./pages/Features.jsx";
@@ -12,9 +13,11 @@ import NotFound from "./pages/NotFound.jsx";
 import LandingPage from "./frontend/LandingPage.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import GoogleSuccess from "./pages/GoogleSuccess.jsx";
+import AddCandidateForm from "./frontend/AddCandidate.jsx";
 
 const App = () => (
   <BrowserRouter>
+  <AuthProvider>
     <Routes>
       <Route path="/" element={<Index />} />
       <Route path="/about" element={<About />} />
@@ -23,11 +26,13 @@ const App = () => (
       <Route path="/help" element={<Help />} />
       <Route path="/signup" element={<SignUp />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/auth/callback" element={<GoogleSuccess />} />
+      <Route path="/google-success" element={<GoogleSuccess />} />
       <Route path="/landing-page" element={<LandingPage />} />
       <Route path="/dashboard" element={<Dashboard /> } />
+      <Route path="/add-candidate" element={<AddCandidateForm /> } />
       <Route path="*" element={<NotFound />} />
     </Routes>
+  </AuthProvider>
   </BrowserRouter>
 );
 
