@@ -74,7 +74,7 @@ export default function LoginForm() {
           <input
             type="text"
             name="username"
-            value={formData.username}
+            value={formData.name}
             onChange={handleInputChange}
             placeholder="Enter your username"
             className="w-full px-3 py-3 border border-crackterview-muted rounded-lg font-poppins text-xs placeholder-crackterview-muted focus:outline-none focus:ring-2 focus:ring-crackterview-blue focus:border-transparent"

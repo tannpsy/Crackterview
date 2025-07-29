@@ -2,15 +2,15 @@ import Candidate from "../models/Candidate.js";
 
 export const createCandidate = async (req, res) => {
   try {
-    const { username, email, position } = req.body;
+    const { name, email, position } = req.body;
     const fileUrl = req.file ? req.file.path : null;
 
-    if (!username || !email || !position) {
+    if (!name || !email || !position) {
       return res.status(400).json({ error: "Missing fields" });
     }
 
     const candidate = await Candidate.create({
-      username,
+      name,
       email,
       position,
       videoOrPhoto: fileUrl,
