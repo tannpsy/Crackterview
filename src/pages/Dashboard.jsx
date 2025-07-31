@@ -117,6 +117,40 @@ export default function Dashboard() {
         </div>
       </div>
 
+    {/* --- CANDIDATE TABLE --- */}
+      <div className="mt-12 bg-white rounded-[40px] border border-[#D9D9D9] shadow-[0_4px_4px_rgba(0,0,0,0.25)] p-6">
+        <h2 className="text-[28px] font-bold text-black mb-6 font-montserrat">Candidates</h2>
+
+        {/* Action Bar */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+          <div className="relative w-full md:w-1/2">
+            <input
+              type="text"
+              placeholder="Search Candidates"
+              className="w-full pl-10 pr-10 py-2 rounded-full border border-gray-300 focus:outline-none"
+            />
+            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></span>
+            <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 cursor-pointer">✕</span>
+          </div>
+
+          <div className="flex flex-wrap gap-2 justify-end">
+            <button className="px-4 py-2 rounded-full border text-[#1976D2] border-[#1976D2] text-sm">⬇ Download</button>
+            <button className="px-4 py-2 rounded-full border text-gray-500 border-gray-300 text-sm">⬆ Import</button>
+            <button className="px-4 py-2 rounded-full bg-[#1976D2] text-white text-sm" onClick={() => setShowForm(true)}>
+                ➕ Add Candidates
+            </button>
+            <button className="px-4 py-2 rounded-full border text-gray-500 border-gray-300 text-sm">🧃 Filter Candidates</button>
+          </div>
+          {showForm && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+              <div className="relative">
+                <AddCandidateForm onClose={() => setShowForm(false)} />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Table Section */}
       <div className="overflow-auto">
         <table className="min-w-full text-sm border-collapse">
