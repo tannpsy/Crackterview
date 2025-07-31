@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
 export default function SignUpForm() {
   const navigate = useNavigate();
@@ -25,12 +26,12 @@ const handleSubmit = async (e) => {
   e.preventDefault();
 
   if (!formData.agreeToTerms) {
-    alert("You must agree to the terms.");
+    toast.error("You must agree to the terms.");
     return;
   }
 
   if (formData.password !== formData.repeatPassword) {
-    alert("Passwords do not match.");
+    toast.error("Passwords do not match.");
     return;
   }
 
@@ -49,6 +50,7 @@ const handleSubmit = async (e) => {
     const data = await res.json();
 
     if (!res.ok) {
+      toast.error("Sign up failed!")
       throw new Error(data.error || "Sign up failed");
     }
 

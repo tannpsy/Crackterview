@@ -1,8 +1,10 @@
 import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
+import { toast } from "react-hot-toast";
 import DashboardHeader from "../components/HeaderDashboard";
 import AddCandidateForm from "../frontend/AddCandidate";
 import PartnerFooter from "../components/PartnerFooter";
+// import FeedbackModal from "../components/FeedbackModal"; feedback moved to user interview page
 
 export default function Dashboard() {
   const [stats, setStats] = useState([]);
@@ -10,6 +12,8 @@ export default function Dashboard() {
   const [loadingCandidates, setLoadingCandidates] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  // const [selectedCandidate, setSelectedCandidate] = useState(null);
+
   const pageSize = 10;
 
   const paginatedCandidates = candidates.slice(
@@ -47,7 +51,6 @@ export default function Dashboard() {
           { label: "Total Applicants", value: data.totalApplicants, color: "text-[#1976D2]" },
           { label: "Total Interviews", value: data.totalInterviews, color: "text-black" },
           { label: "Total Responses", value: data.totalResponses, color: "text-[#4CAF50]" },
-          // "Need Response" will be calculated dynamically below
         ]);
       }
     } catch (err) {
@@ -67,6 +70,44 @@ export default function Dashboard() {
       setLoadingCandidates(false);
     }
   }, []);
+
+// const handleFeedbackSubmit = async ({ candidateId, hrRating, hrNotes, interviewId }) => {
+//   const candidate = candidates.find(c => c._id === candidateId);
+//   const finalInterviewId = candidate?.interviewId || interviewId;
+
+//   if (!finalInterviewId) {
+//     toast.error("No interview exists for this candidate.");
+//     return;
+//   }
+
+
+//   try {
+//     await axios.put(
+//       `http://localhost:5000/api/dashboard/candidates/${candidateId}/interviews/${finalInterviewId}/review-status`,
+//       {
+//         hrRating: rating,
+//         hrNotes: notes,
+//         hrFeedbackProvided: true,
+//       },
+//       { withCredentials: true }
+//     );
+
+//     setCandidates(prev =>
+//       prev.map(c =>
+//         c._id === candidateId
+//           ? { ...c, feedback: "Sent", rating, interviewId: finalInterviewId }
+//           : c
+//       )
+//     );
+
+//     toast.success("Feedback submitted!");
+//     setSelectedCandidate(null);
+//   } catch (error) {
+//     console.error("Error submitting feedback:", error);
+//     toast.error("Failed to submit feedback.");
+//   }
+// };
+
 
   const handleKeyDown = useCallback((e) => {
     if (e.key === "Escape") setShowForm(false);
@@ -88,15 +129,13 @@ export default function Dashboard() {
 
   const handleCandidateAdded = (newCandidate) => {
     setCandidates((prev) => [...prev, newCandidate]);
-    setCurrentPage(1); // Reset to page 1 after add
+    setCurrentPage(1);
   };
 
   return (
     <div className="w-full max-w-[1315px] mx-auto">
       <DashboardHeader />
       <br />
-
-      {/* Stats Section */}
       <div className="bg-white rounded-[40px] border border-[#D9D9D9] shadow p-4 sm:p-6 lg:p-8">
         <div className="max-w-[1280px] mx-auto">
           <h1 className="text-[32px] font-bold text-black mb-8 lg:mb-12 font-montserrat">
@@ -117,11 +156,9 @@ export default function Dashboard() {
         </div>
       </div>
 
-    {/* --- CANDIDATE TABLE --- */}
       <div className="mt-12 bg-white rounded-[40px] border border-[#D9D9D9] shadow-[0_4px_4px_rgba(0,0,0,0.25)] p-6">
         <h2 className="text-[28px] font-bold text-black mb-6 font-montserrat">Candidates</h2>
 
-        {/* Action Bar */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
           <div className="relative w-full md:w-1/2">
             <input
@@ -137,7 +174,7 @@ export default function Dashboard() {
             <button className="px-4 py-2 rounded-full border text-[#1976D2] border-[#1976D2] text-sm">⬇ Download</button>
             <button className="px-4 py-2 rounded-full border text-gray-500 border-gray-300 text-sm">⬆ Import</button>
             <button className="px-4 py-2 rounded-full bg-[#1976D2] text-white text-sm" onClick={() => setShowForm(true)}>
-                ➕ Add Candidates
+              ➕ Add Candidates
             </button>
             <button className="px-4 py-2 rounded-full border text-gray-500 border-gray-300 text-sm">🧃 Filter Candidates</button>
           </div>
@@ -151,7 +188,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Table Section */}
       <div className="overflow-auto">
         <table className="min-w-full text-sm border-collapse">
           <thead className="text-gray-500 border-b border-gray-300">
@@ -165,7 +201,7 @@ export default function Dashboard() {
               <th className="text-left py-3 px-2">Status</th>
               <th className="text-left py-3 px-2">AI Score</th>
               <th className="text-left py-3 px-2">HR Rating</th>
-              <th className="text-left py-3 px-2">Send Feedback</th>
+              <th className="text-left py-3 px-2">Send Email</th>
             </tr>
           </thead>
           <tbody className="text-gray-700">
@@ -218,7 +254,14 @@ export default function Dashboard() {
                     <td className={`py-3 px-2 font-semibold ${statusColor}`}>{status}</td>
                     <td className="py-3 px-2 font-bold">{score}/100</td>
                     <td className="py-3 px-2 font-bold">{rating}/5.0</td>
-                    <td className={`py-3 px-2 font-semibold ${feedbackColor}`}>{feedback}</td>
+                    <td
+                      className={`py-3 px-2 font-semibold ${feedbackColor}`}
+                      onClick={() => {
+                        if (feedback !== "Sent") setSelectedCandidate(c);
+                      }}
+                    >
+                      {feedback}
+                    </td>
                   </tr>
                 );
               })
@@ -227,19 +270,22 @@ export default function Dashboard() {
         </table>
       </div>
 
-      {/* Modal */}
-      {showForm && (
-        <div
-          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 animate-fadeIn"
-          onClick={() => setShowForm(false)}
-        >
-          <div className="animate-scaleIn" onClick={(e) => e.stopPropagation()}>
-            <AddCandidateForm onClose={() => setShowForm(false)} onCandidateAdded={handleCandidateAdded} />
-          </div>
-        </div>
-      )}
+      {/* {selectedCandidate && (
+        <FeedbackModal
+          isOpen={true}
+          candidate={selectedCandidate}
+          interviewId={selectedCandidate.interviewId}
+          onClose={() => setSelectedCandidate(null)}
+          onSubmit={(data) =>
+            handleFeedbackSubmit({
+              ...data,
+              candidateId: selectedCandidate._id,
+              interviewId: data.interviewId || selectedCandidate.interviewId
+            })
+          }
+        />
+      )} */}
 
-      {/* Pagination */}
       <div className="flex justify-between items-center mt-6 text-sm text-gray-500">
         <button
           onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
@@ -273,7 +319,7 @@ export default function Dashboard() {
           Next →
         </button>
       </div>
-        <PartnerFooter></PartnerFooter>
+      <PartnerFooter />
     </div>
   );
 }

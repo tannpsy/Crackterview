@@ -58,96 +58,100 @@ router.get('/stats', isAuthenticated, isHR, async (req, res, next) => {
 // @desc Get list of candidates with their latest interview details for the dashboard table
 // @access Private (HR only)
 router.get('/candidates', isAuthenticated, isHR, async (req, res, next) => {
-    try {
-        const userId = req.user._id;
+  try {
+    const userId = req.user._id;
 
-        const { keyword, page = 1, pageSize = 10, sortBy = 'appliedDate', sortOrder = 'desc' } = req.query;
+    const { keyword, page = 1, pageSize = 10, sortBy = 'appliedDate', sortOrder = 'desc' } = req.query;
 
-        const skip = (parseInt(page) - 1) * parseInt(pageSize);
-        const limit = parseInt(pageSize);
+    const skip = (parseInt(page) - 1) * parseInt(pageSize);
+    const limit = parseInt(pageSize);
 
-        const query = { createdBy: userId };
+    const query = { createdBy: userId };
 
-        if (keyword) {
-            query.$or = [
-                { name: { $regex: keyword, $options: 'i' } },
-                { position: { $regex: keyword, $options: 'i' } },
-                { email: { $regex: keyword, $options: 'i' } }
-            ];
-        }
-
-        const totalCandidates = await Candidate.countDocuments(query);
-
-        const candidates = await Candidate.aggregate([
-            { $match: query },
-            { $sort: { [sortBy]: sortOrder === 'asc' ? 1 : -1 } },
-            { $skip: skip },
-            { $limit: limit },
-            {
-                $lookup: {
-                    from: 'interviews',
-                    localField: 'interviews',
-                    foreignField: '_id',
-                    as: 'interviewDetails'
-                }
-            },
-            {
-                $addFields: {
-                    latestInterview: {
-                        $last: {
-                            $filter: {
-                                input: "$interviewDetails",
-                                as: "interview",
-                                cond: { $in: ["$$interview.processStatus", ['Analysis Complete', 'HR Reviewed']] }
-                            }
-                        }
-                    }
-                }
-            },
-            {
-                $project: {
-                    _id: 1,
-                    name: 1,
-                    email: 1,
-                    position: 1,
-                    appliedDate: 1,
-                    status: {
-                        $cond: {
-                            if: { $and: [
-                                { $ne: ["$latestInterview", null] },
-                                "$latestInterview.hrFeedbackProvided"
-                            ]},
-                            then: "Reviewed",
-                            else: "Unreviewed"
-                        }
-                    },
-                    aiScore: { $ifNull: ["$latestInterview.overallAiScore", null] },
-                    hrRating: { $ifNull: ["$latestInterview.hrRating", null] },
-                    sendFeedbackStatus: {
-                        $cond: {
-                            if: { $and: [
-                                { $ne: ["$latestInterview", null] },
-                                "$latestInterview.hrFeedbackProvided"
-                            ]},
-                            then: "Sent",
-                            else: "Need Review"
-                        }
-                    }
-                }
-            }
-        ]);
-
-        res.json({
-            data: candidates,
-            total: totalCandidates,
-            page: parseInt(page),
-            pageSize: parseInt(pageSize)
-        });
-
-    } catch (error) {
-        console.error("Error fetching candidates for dashboard:", error);
-        next(error);
+    if (keyword) {
+      query.$or = [
+        { name: { $regex: keyword, $options: 'i' } },
+        { position: { $regex: keyword, $options: 'i' } },
+        { email: { $regex: keyword, $options: 'i' } }
+      ];
     }
+
+    const totalCandidates = await Candidate.countDocuments(query);
+
+    const candidates = await Candidate.aggregate([
+      { $match: query },
+      { $sort: { [sortBy]: sortOrder === 'asc' ? 1 : -1 } },
+      { $skip: skip },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: 'interviews',
+          localField: 'interviews',
+          foreignField: '_id',
+          as: 'interviewDetails'
+        }
+      },
+      {
+        $addFields: {
+          latestInterview: {
+            $last: {
+              $filter: {
+                input: "$interviewDetails",
+                as: "interview",
+                cond: { $in: ["$$interview.processStatus", ['Analysis Complete', 'HR Reviewed']] }
+              }
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          email: 1,
+          position: 1,
+          appliedDate: 1,
+          interviewId: "$latestInterview._id", 
+          status: {
+            $cond: {
+              if: {
+                $and: [
+                  { $ne: ["$latestInterview", null] },
+                  "$latestInterview.hrFeedbackProvided"
+                ]
+              },
+              then: "Reviewed",
+              else: "Unreviewed"
+            }
+          },
+          aiScore: { $ifNull: ["$latestInterview.overallAiScore", null] },
+          hrRating: { $ifNull: ["$latestInterview.hrRating", null] },
+          sendFeedbackStatus: {
+            $cond: {
+              if: {
+                $and: [
+                  { $ne: ["$latestInterview", null] },
+                  "$latestInterview.hrFeedbackProvided"
+                ]
+              },
+              then: "Sent",
+              else: "Need Review"
+            }
+          }
+        }
+      }
+    ]);
+
+    res.json({
+      data: candidates,
+      total: totalCandidates,
+      page: parseInt(page),
+      pageSize: parseInt(pageSize)
+    });
+  } catch (error) {
+    console.error("Error fetching candidates for dashboard:", error);
+    next(error);
+  }
 });
 
 
@@ -244,47 +248,85 @@ router.post(
 // @route PUT /api/dashboard/candidates/:candidateId/interviews/:interviewId/review-status
 // @desc Update HR review status for a specific interview of a candidate
 // @access Private (HR only)
-router.put('/candidates/:candidateId/interviews/:interviewId/review-status', isAuthenticated, isHR, async (req, res, next) => {
+router.put(
+  '/candidates/:candidateId/interviews/:interviewId/review-status',
+  isAuthenticated,
+  isHR,
+  async (req, res, next) => {
     try {
-        const { candidateId, interviewId } = req.params;
-        const { hrRating, hrNotes, hrFeedbackProvided } = req.body;
-        const userId = req.user._id;
+      const { candidateId, interviewId } = req.params;
+      const {
+        hrRating: bodyHrRating,
+        hrNotes: bodyHrNotes,
+        hrFeedbackProvided: bodyHrFeedbackProvided
+      } = req.body;
 
-        if (hrRating !== undefined && (typeof hrRating !== 'number' || hrRating < 0 || hrRating > 5)) {
-            return res.status(400).json({ message: "HR Rating must be a number between 0 and 5." });
-        }
+      const {
+        hrRating: queryHrRating,
+        hrNotes: queryHrNotes,
+        hrFeedbackProvided: queryHrFeedbackProvided
+      } = req.query;
 
-        const interview = await Interview.findOneAndUpdate(
-            { _id: interviewId, candidateId: candidateId, userId: userId },
-            {
-                $set: {
-                    ...(hrRating !== undefined && { hrRating: hrRating }),
-                    ...(hrNotes !== undefined && { hrNotes: hrNotes }),
-                    ...(hrFeedbackProvided !== undefined && { hrFeedbackProvided: hrFeedbackProvided }),
-                    processStatus: hrFeedbackProvided ? 'HR Reviewed' : 'Analysis Complete'
-                }
-            },
-            { new: true }
-        ).populate('candidateId');
+      const hrRating = bodyHrRating ?? queryHrRating;
+      const hrNotes = bodyHrNotes ?? queryHrNotes;
+      const hrFeedbackProvided = bodyHrFeedbackProvided ?? queryHrFeedbackProvided;
 
-        if (!interview) {
-            return res.status(404).json({ message: "Interview not found or you don't have access to review it." });
-        }
+      const userId = req.user._id;
 
-        // Anda bisa memperbarui hrRating di Candidate berdasarkan interview terakhir yang direview,
-        // atau menghitung rata-rata dari semua interview yang direview.
-        // Untuk kesederhanaan, kita bisa asumsikan ini adalah rating terakhir yang diberikan untuk kandidat itu.
-        await Candidate.findByIdAndUpdate(candidateId, { $set: { hrRating: hrRating } });
+      // Validate rating
+      const parsedHrRating = parseFloat(hrRating);
+      if (
+        hrRating !== undefined &&
+        (isNaN(parsedHrRating) || parsedHrRating < 0 || parsedHrRating > 5)
+      ) {
+        return res
+          .status(400)
+          .json({ message: "HR Rating must be a number between 0 and 5." });
+      }
 
-        res.json({
-            message: "Interview review status updated successfully.",
-            interview: interview
+      const interview = await Interview.findOne({
+        _id: interviewId,
+        candidateId,
+        userId,
+      });
+
+      if (!interview) {
+        return res
+          .status(404)
+          .json({ message: "Interview not found for this candidate." });
+      }
+
+      // Apply updates
+      if (hrRating !== undefined) interview.hrRating = parsedHrRating;
+      if (hrNotes !== undefined) interview.hrNotes = hrNotes;
+      if (hrFeedbackProvided !== undefined) {
+        interview.hrFeedbackProvided =
+          hrFeedbackProvided === "true" || hrFeedbackProvided === true;
+        interview.processStatus = interview.hrFeedbackProvided
+          ? "HR Reviewed"
+          : "Analysis Complete";
+      }
+
+      await interview.save();
+
+      // Update candidate hrRating
+      if (hrRating !== undefined) {
+        await Candidate.findByIdAndUpdate(candidateId, {
+          $set: { hrRating: parsedHrRating },
         });
+      }
+
+      const populatedInterview = await interview.populate("candidateId");
+      res.json({
+        message: "Interview review status updated successfully.",
+        interview: populatedInterview,
+      });
     } catch (error) {
-        console.error("Error updating interview review status:", error);
-        next(error);
+      console.error("Error updating interview review status:", error);
+      next(error);
     }
-});
+  }
+);
 
 
 // Endpoint untuk menghapus kandidat dan interview-nya

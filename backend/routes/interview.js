@@ -69,7 +69,7 @@ router.get('/:interviewId', isAuthenticated, isHR, async (req, res, next) => {
 // Endpoint untuk HR me-review wawancara
 router.put('/:interviewId/review', isAuthenticated, isHR, async (req, res, next) => {
     const { interviewId } = req.params;
-    const { hrRating, hrNotes } = req.body;
+    const { hrRating, hrNotes, hrFeedbackProvided } = req.body || {};;
     const userId = req.user._id;
 
     if (typeof hrRating !== 'number' || hrRating < 0 || hrRating > 5) {
