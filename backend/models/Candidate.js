@@ -1,4 +1,3 @@
-// Backend/models/Candidate.js (Revisi Minor)
 import mongoose, { Schema } from "mongoose";
 
 const CandidateSchema = new Schema(
