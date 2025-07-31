@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import DashboardHeader from "../components/HeaderDashboard";
 import AddCandidateForm from "../frontend/AddCandidate";
+import PartnerFooter from "../components/PartnerFooter";
 
 export default function Dashboard() {
   const [stats, setStats] = useState([]);
@@ -238,6 +239,7 @@ export default function Dashboard() {
           Next →
         </button>
       </div>
+        <PartnerFooter></PartnerFooter>
     </div>
   );
 }
