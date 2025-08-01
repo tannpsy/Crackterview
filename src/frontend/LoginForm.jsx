@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
-import { useAuth } from "./context/AuthContext"; // ✅ Use AuthContext
+import { useAuth } from "./context/AuthContext";
 
 export default function LoginForm() {
   const navigate = useNavigate();
-  const { login, authLoading } = useAuth(); // ✅ Get login() & loading state
+  const { login, authLoading } = useAuth();
 
   const [formData, setFormData] = useState({
     username: "",
@@ -42,8 +42,14 @@ export default function LoginForm() {
         throw new Error(data.error || "Login failed");
       }
 
+      const userData = data.user || {
+        _id: data._id,
+        username: data.username,
+        email: data.email,
+      };
+
       localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
+      localStorage.setItem("user", JSON.stringify(userData));
 
       toast.success("Login successful!");
       navigate("/dashboard");
@@ -58,7 +64,6 @@ export default function LoginForm() {
 
   return (
     <div className="w-full max-w-md bg-white p-6 lg:p-8">
-      {/* Header */}
       <div className="mb-6">
         <h2 className="text-crackterview-black font-poppins text-3xl font-medium mb-2">
           Login
@@ -69,7 +74,7 @@ export default function LoginForm() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Username (UI only) */}
+        {/* Username (UI only, not sent to backend) */}
         <div className="space-y-2">
           <label className="text-crackterview-black font-poppins text-sm font-medium">
             Username
@@ -162,6 +167,7 @@ export default function LoginForm() {
             className="w-full flex items-center justify-center space-x-3 py-3 px-5 border border-crackterview-muted rounded-lg hover:bg-gray-50 transition-colors duration-200"
             onClick={handleGoogleLogin}
           >
+            {/* Google Icon */}
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
               <path
                 d="M21.8055 10.0415H21V10H12V14H17.6515C16.827 16.3285 14.6115 18 12 18C8.6865 18 6 15.3135 6 12C6 8.6865 8.6865 6 12 6C13.5295 6 14.921 6.577 15.9805 7.5195L18.809 4.691C17.023 3.0265 14.634 2 12 2C6.4775 2 2 6.4775 2 12C2 17.5225 6.4775 22 12 22C17.5225 22 22 17.5225 22 12C22 11.3295 21.931 10.675 21.8055 10.0415Z"

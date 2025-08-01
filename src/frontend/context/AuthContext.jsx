@@ -2,7 +2,7 @@
 import { createContext, useState, useContext, useEffect, useCallback } from "react";
 import { message } from "antd";
 import { jwtDecode } from "jwt-decode";
-import { Navigate } from "react-router-dom"; // ✅ Add this
+import { Navigate } from "react-router-dom";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 const AuthContext = createContext(null);
@@ -13,7 +13,7 @@ export const useAuth = () => {
   return context;
 };
 
-// ✅ ProtectedRoute is now part of AuthContext
+// ✅ ProtectedRoute component
 export function ProtectedRoute({ children }) {
   const { isAuthenticated } = useAuth();
   if (!isAuthenticated) {
@@ -41,14 +41,15 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(!!storedToken);
   const [authLoading, setAuthLoading] = useState(false);
 
+  // ✅ Centralized function to store auth data
   const saveAuthData = (accessToken, refreshToken, userData, rememberMe) => {
     const storage = rememberMe ? localStorage : sessionStorage;
     storage.setItem("token", accessToken);
-    storage.setItem("refreshToken", refreshToken);
+    if (refreshToken) storage.setItem("refreshToken", refreshToken);
     storage.setItem("user", JSON.stringify(userData));
 
     setToken(accessToken);
-    setRefreshToken(refreshToken);
+    setRefreshToken(refreshToken || null);
     setUser(userData);
     setIsAuthenticated(true);
   };
@@ -96,6 +97,7 @@ export const AuthProvider = ({ children }) => {
     }
   }, [refreshToken]);
 
+  // ✅ Auto refresh token if near expiry
   useEffect(() => {
     if (!token) return;
     const expiry = getExpiry(token);
@@ -113,6 +115,7 @@ export const AuthProvider = ({ children }) => {
     return () => clearTimeout(timer);
   }, [token, refreshAccessToken]);
 
+  // ✅ Login now automatically saves user data properly
   const login = useCallback(async (email, password, rememberMe) => {
     setAuthLoading(true);
     try {
@@ -123,11 +126,23 @@ export const AuthProvider = ({ children }) => {
       });
 
       const data = await res.json();
-      if (!res.ok || !data.token || !data.refreshToken) {
+      if (!res.ok || !data.token) {
         throw new Error(data.error || "Login failed");
       }
 
-      saveAuthData(data.token, data.refreshToken, data.user, rememberMe);
+      // ✅ Normalize user data
+      const userData = data.user
+        ? data.user
+        : {
+            _id: data._id,
+            username: data.username,
+            email: data.email,
+            isHR: data.isHR,
+          };
+
+      // ✅ Store everything in one place
+      saveAuthData(data.token, data.refreshToken || null, userData, rememberMe);
+
       message.success("Login successful!");
       return true;
     } catch (err) {

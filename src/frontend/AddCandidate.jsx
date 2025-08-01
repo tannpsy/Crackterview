@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { toast } from "react-hot-toast";
 
 export default function AddCandidateForm({ onClose, onCandidateAdded }) {
   const [formData, setFormData] = useState({
@@ -28,7 +29,7 @@ export default function AddCandidateForm({ onClose, onCandidateAdded }) {
     payload.append("email", formData.email);
     payload.append("position", formData.position);
     payload.append("interviewType", formData.interviewType);
-    payload.append("recording", formData.file); // this must match backend field name
+    payload.append("recording", formData.file);
 
     try {
       const res = await fetch("/api/dashboard/candidates", {
@@ -40,11 +41,16 @@ export default function AddCandidateForm({ onClose, onCandidateAdded }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to create candidate");
 
-      onCandidateAdded(data.candidate);
+      const newCandidate = data.candidate || data; 
+
+      onCandidateAdded(newCandidate);
+
+      toast.success(`Candidate added successfully!`);
+
       onClose();
     } catch (error) {
       console.error("Error creating candidate:", error);
-      alert(error.message);
+      toast.error(error.message || "Failed to add candidate");
     } finally {
       setLoading(false);
     }
@@ -54,10 +60,13 @@ export default function AddCandidateForm({ onClose, onCandidateAdded }) {
     <div className="bg-white p-6 w-[400px] rounded-xl shadow-xl">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-black">Add New Candidate</h2>
-        <button onClick={onClose} className="text-gray-600 hover:text-black text-xl">✕</button>
+        <button onClick={onClose} className="text-gray-600 hover:text-black text-xl">
+          ✕
+        </button>
       </div>
 
       <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+        {/* Name */}
         <input
           type="text"
           name="name"
@@ -68,6 +77,7 @@ export default function AddCandidateForm({ onClose, onCandidateAdded }) {
           className="border border-gray-300 rounded-lg px-3 py-2"
         />
 
+        {/* Email */}
         <input
           type="email"
           name="email"
@@ -78,6 +88,7 @@ export default function AddCandidateForm({ onClose, onCandidateAdded }) {
           className="border border-gray-300 rounded-lg px-3 py-2"
         />
 
+        {/* Position */}
         <input
           type="text"
           name="position"
@@ -88,6 +99,7 @@ export default function AddCandidateForm({ onClose, onCandidateAdded }) {
           className="border border-gray-300 rounded-lg px-3 py-2"
         />
 
+        {/* Interview Type */}
         <select
           name="interviewType"
           value={formData.interviewType}
@@ -100,6 +112,7 @@ export default function AddCandidateForm({ onClose, onCandidateAdded }) {
           <option value="audio">Audio</option>
         </select>
 
+        {/* File Upload */}
         <div className="flex flex-col">
           <label className="text-sm font-semibold text-black mb-1">Upload Video/Audio</label>
           <div className="border-2 border-dashed border-gray-300 rounded-xl py-14 px-6 text-center text-sm text-gray-600 cursor-pointer">
@@ -115,6 +128,7 @@ export default function AddCandidateForm({ onClose, onCandidateAdded }) {
           </div>
         </div>
 
+        {/* Buttons */}
         <div className="flex justify-end gap-3 mt-4">
           <button
             type="button"

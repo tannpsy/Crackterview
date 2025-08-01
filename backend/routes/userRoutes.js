@@ -41,8 +41,8 @@ router.put("/:id", async (req, res) => {
 });
 
 router.delete("/:id", async (req, res) => {
-  await User.findByIdAndDelete(req.params.id);
-  res.json({ message: "User deleted" });
+  await User.findByIdAnd(req.params.id);
+  res.json({ message: "User d" });
 });
 
 export default router;

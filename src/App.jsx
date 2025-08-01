@@ -15,7 +15,6 @@ import Dashboard from "./pages/Dashboard.jsx";
 import GoogleSuccess from "./pages/GoogleSuccess.jsx";
 import AddCandidateForm from "./frontend/AddCandidate.jsx";
 import InterviewPage from "./pages/VideoInterview.jsx";
-import VideoInterview from "./pages/VideoInterview.jsx";
 
 const App = () => (
   <BrowserRouter>
@@ -43,6 +42,7 @@ const App = () => (
       <Route path="/video-interview/:interviewId" element={<VideoInterview /> } />
       <Route path="*" element={<NotFound />} />
     </Routes>
+     <Toaster position="top-right" reverseOrder={false} />
   </AuthProvider>
   </BrowserRouter>
 );
