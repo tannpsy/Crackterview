@@ -200,9 +200,6 @@ const handleSubmit = async (e) => {
               Sign in with Google
             </span>
           </button>
-
-          {/* Microsoft Login */}
-          
         </div>
 
         {/* Sign In Link */}

@@ -33,13 +33,6 @@ export function Hero() {
             </svg>
           </button>
         </div>
-
-        {/* Scroll Down Indicator */}
-        <div className="flex justify-center">
-          <div className="w-22 h-22 bg-white border-2 border-black rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow duration-200 cursor-pointer">
-            <ChevronDown className="w-8 h-8 text-black" />
-          </div>
-        </div>
       </div>
     </div>
   );

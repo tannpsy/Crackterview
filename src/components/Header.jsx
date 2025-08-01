@@ -29,9 +29,10 @@ export function Header() {
         {/* Right Nav */}
         <div className="hidden lg:flex items-center space-x-8">
           <div className="flex items-center space-x-4 mr-6">
+            <span className="text-base font-lato text-crackterview-gray mr-10">Dashboard</span>
             <span className="text-base font-lato text-crackterview-gray">EN</span>
-            <Link to="/help" className="text-base font-lato text-crackterview-black hover:text-crackterview-blue transition-colors">
-              Need help?
+            <Link to="/faq" className="text-base font-lato text-crackterview-black hover:text-crackterview-blue transition-colors">
+              FAQs
             </Link>
           </div>
         </div>

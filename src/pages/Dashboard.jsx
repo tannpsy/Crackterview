@@ -4,6 +4,11 @@ import { toast } from "react-hot-toast";
 import DashboardHeader from "../components/HeaderDashboard";
 import AddCandidateForm from "../frontend/AddCandidate";
 import PartnerFooter from "../components/PartnerFooter";
+import { Search } from "lucide-react";
+import FilterIcon from "../components/icons/FilterIcon";
+import AddIcon from "../components/icons/AddIcon";
+import DownloadIcon from "../components/icons/DownloadIcon";
+import * as XLSX from 'xlsx';
 // import FeedbackModal from "../components/FeedbackModal"; feedback moved to user interview page
 
 export default function Dashboard() {
@@ -23,13 +28,13 @@ export default function Dashboard() {
   );
 
   const calculatedNeedResponse = candidates.filter(
-    (c) => (c.feedback ?? "Send Feedback") !== "Sent"
+    (c) => (c.feedback ?? "Need Review") !== "Sent"
   ).length;
 
   const mergedStats = [
-    ...stats.filter((s) => s.label !== "Need Response"),
+    ...stats.filter((s) => s.label !== "Need Review"),
     {
-      label: "Need Response",
+      label: "Need Review",
       value: calculatedNeedResponse,
       color: "text-[#FF3D00]",
     },
@@ -141,6 +146,54 @@ export default function Dashboard() {
     setCurrentPage(1);
   };
 
+  const handleDownload = () => {
+    try {
+      console.log('Starting download with candidates:', candidates.length);
+      // Prepare the data for Excel
+      const excelData = candidates.map(candidate => ({
+        Name: candidate.name || '',
+        Email: candidate.email || '',
+        Position: candidate.position || '',
+        'Applied Date': candidate.appliedDate ? new Date(candidate.appliedDate).toLocaleDateString() : '-',
+        Status: candidate.status || 'Unreviewed',
+        'AI Score': candidate.score ?? '-',
+        'HR Rating': candidate.rating ?? '0.0',
+        'Feedback Status': candidate.feedback ?? 'Need Review'
+      }));
+
+      // Create a new workbook and worksheet
+      const workbook = XLSX.utils.book_new();
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+      // Add the worksheet to the workbook
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Candidates');
+
+      // Generate the Excel file
+      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      const data = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      
+      // Create download link
+      const url = window.URL.createObjectURL(data);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `candidates_${new Date().toISOString().split('T')[0]}.xlsx`;
+      
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success('Candidates data downloaded successfully!');
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      toast.error('Failed to download candidates data: ' + error.message);
+      console.error('Detailed error:', error);
+    }
+  };
+
   return (
     <div className="w-full max-w-[1315px] mx-auto">
       <DashboardHeader />
@@ -167,28 +220,41 @@ export default function Dashboard() {
 
       <div className="mt-12 bg-white rounded-[40px] border border-[#D9D9D9] shadow-[0_4px_4px_rgba(0,0,0,0.25)] p-6">
         <h2 className="text-[28px] font-bold text-black mb-6 font-montserrat">Candidates</h2>
-        
-        {/* Tampilkan jumlah kandidat di sini */}
-        <p className="text-gray-600 mb-4">Total Candidates: {candidateCount}</p>
+   
+        {/* <p className="text-gray-600 mb-4">Total Candidates: {candidateCount}</p> */}
         
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-          <div className="relative w-full md:w-1/2">
-            <input
-              type="text"
-              placeholder="Search Candidates"
-              className="w-full pl-10 pr-10 py-2 rounded-full border border-gray-300 focus:outline-none"
-            />
-            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></span>
-            <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 cursor-pointer">✕</span>
+          <div className="flex items-center gap-2 w-full md:w-1/2">
+            <Search className="text-gray-400 w-5 h-5" />
+            <div className="relative flex-1">
+              <input
+                type="text"
+                placeholder="Search Candidates"
+                className="w-full pl-4 pr-10 py-2 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300"
+              />
+              <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 cursor-pointer hover:text-gray-600">✕</span>
+            </div>
           </div>
 
-          <div className="flex flex-wrap gap-2 justify-end">
-            <button className="px-4 py-2 rounded-full border text-[#1976D2] border-[#1976D2] text-sm">⬇ Download</button>
-            <button className="px-4 py-2 rounded-full border text-gray-500 border-gray-300 text-sm">⬆ Import</button>
-            <button className="px-4 py-2 rounded-full bg-[#1976D2] text-white text-sm" onClick={() => setShowForm(true)}>
-              ➕ Add Candidates
+          <div className="flex flex-wrap gap-4 justify-end items-center">
+            <button 
+              onClick={handleDownload}
+              className="px-6 py-2.5 rounded-full border text-[#1976D2] border-[#1976D2] text-sm flex items-center gap-3 hover:bg-[#1565C0] hover:text-white hover:border-[#1565C0] transition-colors min-w-[140px] justify-center"
+            >
+              <DownloadIcon />
+              <span>Download</span>
             </button>
-            <button className="px-4 py-2 rounded-full border text-gray-500 border-gray-300 text-sm">🧃 Filter Candidates</button>
+            <button 
+              className="px-6 py-2.5 rounded-full bg-[#1976D2] text-white text-sm flex items-center gap-3 hover:bg-[#1565C0] transition-colors min-w-[160px] justify-center" 
+              onClick={() => setShowForm(true)}
+            >
+              <AddIcon />
+              <span>Add Candidates</span>
+            </button>
+            <button className="px-6 py-2.5 rounded-full border text-gray-400 border-gray-300 text-sm flex items-center gap-3 hover:text-gray-600 hover:border-gray-400 transition-colors min-w-[160px] justify-center">
+              <FilterIcon />
+              <span>Filter Candidates</span>
+            </button>
           </div>
           {showForm && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
@@ -234,7 +300,7 @@ export default function Dashboard() {
                 const status = c.status || "Unreviewed";
                 const score = c.score ?? Math.floor(Math.random() * 40) + 60;
                 const rating = c.rating ?? "0.0";
-                const feedback = c.feedback ?? "Send Feedback";
+                const feedback = c.feedback ?? "Need Review";
                 const statusColor = status === "Reviewed" ? "text-green-600" : "text-red-500";
                 const feedbackColor =
                   feedback === "Sent"
