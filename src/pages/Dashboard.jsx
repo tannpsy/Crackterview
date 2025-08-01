@@ -140,9 +140,9 @@ export default function Dashboard() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [showForm, handleKeyDown]);
 
-  const handleCandidateAdded = (newCandidate) => {
-    setCandidates((prev) => [...prev, newCandidate]);
-    setCandidateCount(prev => prev + 1); 
+  const handleCandidateAdded = () => {
+    fetchCandidates();
+    fetchStats();
     setCurrentPage(1);
   };
 
@@ -259,7 +259,10 @@ export default function Dashboard() {
           {showForm && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
               <div className="relative">
-                <AddCandidateForm onClose={() => setShowForm(false)} />
+                <AddCandidateForm
+                  onClose={() => setShowForm(false)}
+                  onCandidateAdded={handleCandidateAdded}
+                />
               </div>
             </div>
           )}

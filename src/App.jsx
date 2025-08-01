@@ -15,6 +15,8 @@ import Dashboard from "./pages/Dashboard.jsx";
 import GoogleSuccess from "./pages/GoogleSuccess.jsx";
 import AddCandidateForm from "./frontend/AddCandidate.jsx";
 import InterviewPage from "./pages/VideoInterview.jsx";
+import VideoInterview from "./pages/VideoInterview.jsx";
+import { Toaster } from "react-hot-toast";
 
 const App = () => (
   <BrowserRouter>

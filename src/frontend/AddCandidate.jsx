@@ -43,7 +43,8 @@ export default function AddCandidateForm({ onClose, onCandidateAdded }) {
 
       const newCandidate = data.candidate || data; 
 
-      onCandidateAdded(newCandidate);
+      onCandidateAdded();
+
 
       toast.success(`Candidate added successfully!`);
 
