@@ -23,13 +23,13 @@ export default function Dashboard() {
   );
 
   const calculatedNeedResponse = candidates.filter(
-    (c) => (c.feedback ?? "Send Feedback") !== "Sent"
+    (c) => (c.feedback ?? "Need Review") !== "Sent"
   ).length;
 
   const mergedStats = [
-    ...stats.filter((s) => s.label !== "Need Response"),
+    ...stats.filter((s) => s.label !== "Need Review"),
     {
-      label: "Need Response",
+      label: "Need Review",
       value: calculatedNeedResponse,
       color: "text-[#FF3D00]",
     },
@@ -167,9 +167,8 @@ export default function Dashboard() {
 
       <div className="mt-12 bg-white rounded-[40px] border border-[#D9D9D9] shadow-[0_4px_4px_rgba(0,0,0,0.25)] p-6">
         <h2 className="text-[28px] font-bold text-black mb-6 font-montserrat">Candidates</h2>
-        
-        {/* Tampilkan jumlah kandidat di sini */}
-        <p className="text-gray-600 mb-4">Total Candidates: {candidateCount}</p>
+   
+        {/* <p className="text-gray-600 mb-4">Total Candidates: {candidateCount}</p> */}
         
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
           <div className="relative w-full md:w-1/2">
@@ -234,7 +233,7 @@ export default function Dashboard() {
                 const status = c.status || "Unreviewed";
                 const score = c.score ?? Math.floor(Math.random() * 40) + 60;
                 const rating = c.rating ?? "0.0";
-                const feedback = c.feedback ?? "Send Feedback";
+                const feedback = c.feedback ?? "Need Review";
                 const statusColor = status === "Reviewed" ? "text-green-600" : "text-red-500";
                 const feedbackColor =
                   feedback === "Sent"
