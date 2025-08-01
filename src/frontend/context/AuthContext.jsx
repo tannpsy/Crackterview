@@ -1,143 +1,166 @@
-import { createContext, useState, useContext, useEffect, useCallback } from 'react'; 
-import { message } from 'antd';
+import { createContext, useState, useContext, useEffect, useCallback } from "react";
+import { message } from "antd";
+import { jwtDecode } from "jwt-decode";
+import { Navigate } from "react-router-dom"; // ✅ Add this
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 const AuthContext = createContext(null);
 
 export const useAuth = () => {
-    const context = useContext(AuthContext);
-    if (!context) {
-        throw new Error('useAuth must be used within an AuthProvider');
-    }
-    return context;
+  const context = useContext(AuthContext);
+  if (!context) throw new Error("useAuth must be used within AuthProvider");
+  return context;
 };
 
+// ✅ ProtectedRoute is now part of AuthContext
+export function ProtectedRoute({ children }) {
+  const { isAuthenticated } = useAuth();
+  if (!isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+}
+
 export const AuthProvider = ({ children }) => {
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [user, setUser] = useState(null);
-    const [token, setToken] = useState(localStorage.getItem('jwtToken') || null);
-    const [authLoading, setAuthLoading] = useState(true);
+  const safeParse = (json) => {
+    try {
+      return JSON.parse(json);
+    } catch {
+      return null;
+    }
+  };
 
-    const checkAuthStatus = useCallback(async () => {
-        setAuthLoading(true);
-        const storedToken = localStorage.getItem('jwtToken');
+  const storedToken = localStorage.getItem("token") || sessionStorage.getItem("token");
+  const storedRefreshToken = localStorage.getItem("refreshToken") || sessionStorage.getItem("refreshToken");
+  const storedUser = safeParse(localStorage.getItem("user")) || safeParse(sessionStorage.getItem("user"));
 
-        if (!storedToken) {
-            setIsAuthenticated(false);
-            setUser(null);
-            setToken(null);
-            setAuthLoading(false);
-            return;
-        }
+  const [token, setToken] = useState(storedToken || null);
+  const [refreshToken, setRefreshToken] = useState(storedRefreshToken || null);
+  const [user, setUser] = useState(storedUser || null);
+  const [isAuthenticated, setIsAuthenticated] = useState(!!storedToken);
+  const [authLoading, setAuthLoading] = useState(false);
 
-        try {
-            const response = await fetch("api/auth/status", {
-                method: 'GET',
-                headers: { 'Authorization': `Bearer ${storedToken}` },
-                credentials: 'include'
-            });
+  const saveAuthData = (accessToken, refreshToken, userData, rememberMe) => {
+    const storage = rememberMe ? localStorage : sessionStorage;
+    storage.setItem("token", accessToken);
+    storage.setItem("refreshToken", refreshToken);
+    storage.setItem("user", JSON.stringify(userData));
 
-            if (!response.ok) {
-                localStorage.removeItem('jwtToken');
-                setIsAuthenticated(false);
-                setUser(null);
-                setToken(null);
-            } else {
-                const result = await response.json();
-                if (result.loggedIn) {
-                    setIsAuthenticated(true);
-                    setUser(result.user);
-                    setToken(storedToken);
-                } else {
-                    localStorage.removeItem('jwtToken');
-                    setIsAuthenticated(false);
-                    setUser(null);
-                    setToken(null);
-                }
-            }
-        } catch (error) {
-            console.error("Failed to check auth status:", error);
-            localStorage.removeItem('jwtToken');
-            setIsAuthenticated(false);
-            setUser(null);
-            setToken(null);
-        } finally {
-            setAuthLoading(false);
-        }
-    }, []);
+    setToken(accessToken);
+    setRefreshToken(refreshToken);
+    setUser(userData);
+    setIsAuthenticated(true);
+  };
 
-    const login = useCallback(async (email, password) => {
-        try {
-            const response = await fetch("api/auth/status", {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password }),
-                credentials: 'include'
-            });
+  const clearAuthData = () => {
+    localStorage.clear();
+    sessionStorage.clear();
+    setToken(null);
+    setRefreshToken(null);
+    setUser(null);
+    setIsAuthenticated(false);
+  };
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Login failed. Please check your credentials.');
-            }
+  const getExpiry = (jwt) => {
+    try {
+      const decoded = jwtDecode(jwt);
+      return decoded.exp ? decoded.exp * 1000 : null;
+    } catch {
+      return null;
+    }
+  };
 
-            const result = await response.json();
-            localStorage.setItem('jwtToken', result.token);
-            setIsAuthenticated(true);
-            setUser(result.user);
-            setToken(result.token);
-            message.success(result.message || 'Login successful!');
-            return true;
-        } catch (error) {
-            console.error('Login error:', error);
-            message.error(error.message || 'An unexpected error occurred during login.');
-            setIsAuthenticated(false);
-            setUser(null);
-            setToken(null);
-            return false;
-        }
-    }, []);
+  const refreshAccessToken = useCallback(async () => {
+    if (!refreshToken) return false;
 
-    const logout = useCallback(async () => {
-        try {
-            const response = await fetch("api/auth/status", {
-                method: 'POST',
-                credentials: 'include'
-            });
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken }),
+      });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Logout failed.');
-            }
+      const data = await res.json();
+      if (!res.ok || !data.token) throw new Error(data.error || "Failed to refresh");
 
-            localStorage.removeItem('jwtToken');
-            message.success('Logged out successfully!');
-            setIsAuthenticated(false);
-            setUser(null);
-            setToken(null);
-            return true;
-        } catch (error) {
-            console.error('Logout error:', error);
-            message.error(error.message || 'An unexpected error occurred during logout.');
-            return false;
-        }
-    }, []);
+      const storage = localStorage.getItem("refreshToken") ? localStorage : sessionStorage;
+      storage.setItem("token", data.token);
+      setToken(data.token);
 
-    useEffect(() => {
-        checkAuthStatus();
-    }, [checkAuthStatus]);
+      return true;
+    } catch (err) {
+      console.error("Refresh token failed", err);
+      clearAuthData();
+      return false;
+    }
+  }, [refreshToken]);
 
-    const authContextValue = {
+  useEffect(() => {
+    if (!token) return;
+    const expiry = getExpiry(token);
+    if (!expiry) return;
+
+    const now = Date.now();
+    const timeout = expiry - now - 60 * 1000;
+
+    if (timeout <= 0) {
+      refreshAccessToken();
+      return;
+    }
+
+    const timer = setTimeout(refreshAccessToken, timeout);
+    return () => clearTimeout(timer);
+  }, [token, refreshAccessToken]);
+
+  const login = useCallback(async (email, password, rememberMe) => {
+    setAuthLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.token || !data.refreshToken) {
+        throw new Error(data.error || "Login failed");
+      }
+
+      saveAuthData(data.token, data.refreshToken, data.user, rememberMe);
+      message.success("Login successful!");
+      return true;
+    } catch (err) {
+      message.error(err.message || "Login failed");
+      clearAuthData();
+      return false;
+    } finally {
+      setAuthLoading(false);
+    }
+  }, []);
+
+  const logout = useCallback(async () => {
+    try {
+      await fetch(`${API_BASE_URL}/api/auth/logout`, { method: "POST" });
+    } catch (err) {
+      console.error("Logout error", err);
+    } finally {
+      message.success("Logged out!");
+      clearAuthData();
+    }
+  }, []);
+
+  return (
+    <AuthContext.Provider
+      value={{
         isAuthenticated,
         user,
         token,
         authLoading,
         login,
         logout,
-        checkAuthStatus
-    };
-
-    return (
-        <AuthContext.Provider value={authContextValue}>
-            {children}
-        </AuthContext.Provider>
-    );
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 };

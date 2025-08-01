@@ -13,6 +13,7 @@ export default function Dashboard() {
   const [showForm, setShowForm] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   // const [selectedCandidate, setSelectedCandidate] = useState(null);
+  const [candidateCount, setCandidateCount] = useState(0); 
 
   const pageSize = 10;
 
@@ -62,51 +63,58 @@ export default function Dashboard() {
     try {
       const res = await axios.get("/api/dashboard/candidates", { withCredentials: true });
       const data = res.data?.data;
-      setCandidates(Array.isArray(data) ? data : []);
+      if (Array.isArray(data)) {
+        setCandidates(data);
+        setCandidateCount(data.length); 
+      } else {
+        setCandidates([]);
+        setCandidateCount(0);
+      }
     } catch (err) {
       console.error("Failed to fetch candidates:", err);
       setCandidates([]);
+      setCandidateCount(0);
     } finally {
       setLoadingCandidates(false);
     }
   }, []);
 
-// const handleFeedbackSubmit = async ({ candidateId, hrRating, hrNotes, interviewId }) => {
-//   const candidate = candidates.find(c => c._id === candidateId);
-//   const finalInterviewId = candidate?.interviewId || interviewId;
+  // const handleFeedbackSubmit = async ({ candidateId, hrRating, hrNotes, interviewId }) => {
+  //   const candidate = candidates.find(c => c._id === candidateId);
+  //   const finalInterviewId = candidate?.interviewId || interviewId;
 
-//   if (!finalInterviewId) {
-//     toast.error("No interview exists for this candidate.");
-//     return;
-//   }
+  //   if (!finalInterviewId) {
+  //     toast.error("No interview exists for this candidate.");
+  //     return;
+  //   }
 
 
-//   try {
-//     await axios.put(
-//       `http://localhost:5000/api/dashboard/candidates/${candidateId}/interviews/${finalInterviewId}/review-status`,
-//       {
-//         hrRating: rating,
-//         hrNotes: notes,
-//         hrFeedbackProvided: true,
-//       },
-//       { withCredentials: true }
-//     );
+  //   try {
+  //     await axios.put(
+  //       `http://localhost:5000/api/dashboard/candidates/${candidateId}/interviews/${finalInterviewId}/review-status`,
+  //       {
+  //         hrRating: rating,
+  //         hrNotes: notes,
+  //         hrFeedbackProvided: true,
+  //       },
+  //       { withCredentials: true }
+  //     );
 
-//     setCandidates(prev =>
-//       prev.map(c =>
-//         c._id === candidateId
-//           ? { ...c, feedback: "Sent", rating, interviewId: finalInterviewId }
-//           : c
-//       )
-//     );
+  //     setCandidates(prev =>
+  //       prev.map(c =>
+  //         c._id === candidateId
+  //           ? { ...c, feedback: "Sent", rating, interviewId: finalInterviewId }
+  //           : c
+  //       )
+  //     );
 
-//     toast.success("Feedback submitted!");
-//     setSelectedCandidate(null);
-//   } catch (error) {
-//     console.error("Error submitting feedback:", error);
-//     toast.error("Failed to submit feedback.");
-//   }
-// };
+  //     toast.success("Feedback submitted!");
+  //     setSelectedCandidate(null);
+  //   } catch (error) {
+  //     console.error("Error submitting feedback:", error);
+  //     toast.error("Failed to submit feedback.");
+  //   }
+  // };
 
 
   const handleKeyDown = useCallback((e) => {
@@ -129,6 +137,7 @@ export default function Dashboard() {
 
   const handleCandidateAdded = (newCandidate) => {
     setCandidates((prev) => [...prev, newCandidate]);
+    setCandidateCount(prev => prev + 1); 
     setCurrentPage(1);
   };
 
@@ -158,7 +167,10 @@ export default function Dashboard() {
 
       <div className="mt-12 bg-white rounded-[40px] border border-[#D9D9D9] shadow-[0_4px_4px_rgba(0,0,0,0.25)] p-6">
         <h2 className="text-[28px] font-bold text-black mb-6 font-montserrat">Candidates</h2>
-
+        
+        {/* Tampilkan jumlah kandidat di sini */}
+        <p className="text-gray-600 mb-4">Total Candidates: {candidateCount}</p>
+        
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
           <div className="relative w-full md:w-1/2">
             <input
