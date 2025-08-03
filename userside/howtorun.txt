@@ -1,0 +1,3 @@
+masuk backend, npm run dev
+
+masuk frontend, npm run dev
