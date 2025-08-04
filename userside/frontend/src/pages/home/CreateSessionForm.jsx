@@ -73,9 +73,9 @@ const CreateSessionForm = () => {
     return (
     <div className="w-[90vw] md:w-[35vw] p-7 flex flex-col justify-center">
         <h3 className="text-lg font-semibold text-black">
-            Start a New Interview Journey
+            Hack a Interview Journey
         </h3>
-        <p className="text-xs text-slate-700 mt-[5px] mb-3">
+        <p className="text-xs text-gray-500 mt-[5px] mb-3">
             Fill out a few quick details and unlock your personalized set of interview questions!
         </p>
 

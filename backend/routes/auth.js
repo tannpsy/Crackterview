@@ -39,7 +39,7 @@ router.post("/signup", async (req, res, next) => {
             email,
             password,
             registerType: "normal",
-            isHR: false // Pengguna baru secara default BUKAN HR
+            isHR: false 
         });
 
         const token = generateToken(user);
@@ -52,7 +52,7 @@ router.post("/signup", async (req, res, next) => {
             _id: user._id,
             username: user.username,
             email: user.email,
-            isHR: user.isHR, // <--- TAMBAHKAN INI DI RESPON SIGNUP
+            isHR: user.isHR, 
             token
         });
 
@@ -81,7 +81,7 @@ router.post("/login", (req, res, next) => {
             _id: user._id,
             username: user.username,
             email: user.email,
-            isHR: user.isHR, // <--- TAMBAHKAN INI DI RESPON LOGIN
+            isHR: user.isHR, 
             message: 'Login success!',
             token
         });
@@ -105,7 +105,7 @@ router.get("/login/google/callback",
     passport.authenticate("google", { session: false, failureRedirect: '/login?error=google_failed' }),
     (req, res) => {
         if (req.user) {
-            const token = generateToken(req.user); // generateToken sudah menangani isHR
+            const token = generateToken(req.user); 
             res.cookie("token", token, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
