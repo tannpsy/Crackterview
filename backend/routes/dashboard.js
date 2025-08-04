@@ -15,6 +15,88 @@ const upload = multer({
     limits: { fileSize: 50 * 1024 * 1024 } // Batas ukuran file 50 MB
 });
 
+// @route PUT /api/dashboard/candidates/:id
+// @desc Update an existing candidate and optionally their interview recording
+// @access Private (HR only)
+router.put(
+  '/candidates/:id',
+  isAuthenticated,
+  isHR,
+  upload.single('recording'),
+  async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user._id;
+      const { name, email, position, interviewType, phoneNumber } = req.body;
+      const recordingFile = req.file;
+
+      // Temukan kandidat yang akan diperbarui dan pastikan milik user saat ini
+      const candidate = await Candidate.findOne({ _id: id, createdBy: userId });
+
+      if (!candidate) {
+        return res.status(404).json({ message: "Candidate not found or you do not have permission to edit." });
+      }
+
+      // Perbarui data kandidat
+      candidate.name = name || candidate.name;
+      candidate.email = email || candidate.email;
+      candidate.position = position || candidate.position;
+      candidate.phoneNumber = phoneNumber || candidate.phoneNumber;
+      
+      // Jika ada file baru diunggah, perbarui data interview juga
+      if (recordingFile) {
+        const uniqueFileName = `${Date.now()}-${recordingFile.originalname.replace(/\s/g, '_')}`;
+        let recordingUrl;
+        
+        try {
+          recordingUrl = await uploadFileLocally(recordingFile.buffer, uniqueFileName);
+        } catch (uploadError) {
+          console.error("Error during file re-upload:", uploadError);
+          return res.status(500).json({ message: "Failed to upload new interview recording.", error: uploadError.message });
+        }
+        
+        // Asumsi kandidat hanya memiliki satu interview atau kita ingin update yang terakhir
+        const latestInterview = await Interview.findOne({ candidateId: id, userId: userId }).sort({ createdAt: -1 });
+
+        if (latestInterview) {
+          // TODO: Hapus file lama dari server
+          // const oldFileName = path.basename(latestInterview.recordingUrl);
+          // fs.unlinkSync(path.join(__dirname, '../../public/uploads', oldFileName));
+          
+          latestInterview.interviewType = interviewType || latestInterview.interviewType;
+          latestInterview.recordingUrl = recordingUrl;
+          latestInterview.recordingType = recordingFile.mimetype.startsWith('video') ? 'video' : 'audio';
+          latestInterview.processStatus = 'Uploaded'; // Set status kembali ke Uploaded untuk diproses ulang
+          
+          await latestInterview.save();
+        } else {
+          // Buat interview baru jika belum ada
+          const newInterview = await Interview.create({
+            userId,
+            candidateId: candidate._id,
+            interviewType: interviewType || 'unknown',
+            recordingUrl,
+            recordingType: recordingFile.mimetype.startsWith('video') ? 'video' : 'audio',
+            processStatus: 'Uploaded',
+          });
+          candidate.interviews.push(newInterview._id);
+        }
+      }
+      
+      await candidate.save();
+
+      res.json({
+        message: "Candidate and interview details updated successfully.",
+        candidate,
+      });
+
+    } catch (error) {
+      console.error("Error updating candidate:", error);
+      next(error);
+    }
+  }
+);
+
 // @route GET /api/dashboard/stats
 // @desc Get dashboard statistics (Total Applicants, Total Interviews, Total Responses, Need Response)
 // @access Private (HR only)

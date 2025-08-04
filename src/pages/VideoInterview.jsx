@@ -102,7 +102,7 @@ export default function VideoInterview() {
     try {
       const res = await fetch(`/api/interviews/${interviewId}`);
       if (!res.ok) {
-        const text = await res.text(); // <-- debug raw response
+        const text = await res.text(); 
         console.error("Non-200 response:", text);
         throw new Error(`Server responded with ${res.status}`);
       }
@@ -147,7 +147,7 @@ export default function VideoInterview() {
             {[
               { label: "Name", value: candidate?.name || "N/A" },
               { label: "Email", value: candidate?.email || "N/A" },
-              { label: "Phone Number", value: candidate?.phone || "-" },
+              { label: "Phone Number", value: candidate?.phoneNumber || "-" },
               { label: "Applied For", value: candidate?.position || "-" },
               { label: "Applied Date", value: appliedDate || "-" },
               { label: "Status", value: <span className="font-bold text-green-600">Reviewed</span> },
