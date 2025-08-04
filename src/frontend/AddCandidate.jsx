@@ -7,6 +7,7 @@ export default function AddCandidateForm({ onClose, onCandidateAdded }) {
     email: "",
     position: "",
     interviewType: "",
+    phoneNumber: "",
     file: null,
   });
   const [loading, setLoading] = useState(false);
@@ -29,6 +30,7 @@ export default function AddCandidateForm({ onClose, onCandidateAdded }) {
     payload.append("email", formData.email);
     payload.append("position", formData.position);
     payload.append("interviewType", formData.interviewType);
+    payload.append("phoneNumber", formData.phoneNumber);
     payload.append("recording", formData.file);
 
     try {
@@ -85,6 +87,17 @@ export default function AddCandidateForm({ onClose, onCandidateAdded }) {
           value={formData.email}
           onChange={handleChange}
           placeholder="Email Address"
+          required
+          className="border border-gray-300 rounded-lg px-3 py-2"
+        />
+
+        {/* Phone Number */}
+        <input
+          type="number"
+          name="phoneNumber"
+          value={formData.phoneNumber}
+          onChange={handleChange}
+          placeholder="Phone Number"
           required
           className="border border-gray-300 rounded-lg px-3 py-2"
         />
