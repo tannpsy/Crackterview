@@ -6,6 +6,35 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 // @desc    Generate interview questions and answers using Gemini
 // @route   POST /api/ai/generate-questions
 // @access  Private
+
+const chatWithGemini = async (req, res) => {
+  try {
+    const { history } = req.body;
+
+    if (!history || !Array.isArray(history)) {
+      return res.status(400).json({ message: "History is required and must be an array" });
+    }
+
+    const formattedHistory = history.map((msg) => ({
+      role: msg.from === "user" ? "user" : "model",
+      parts: [{ text: msg.text }],
+    }));
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: formattedHistory,
+    });
+
+    const botReply = response.text || "Sorry, I couldn't understand that.";
+
+    res.status(200).json({ reply: botReply });
+  } catch (error) {
+    console.error("Gemini chat error:", error.message);
+    res.status(500).json({ message: "Failed to chat with Gemini", error: error.message });
+  }
+};
+
+
 const generateInterviewQuestions = async (req, res) => {
   try {
     const { role, experience, topicsToFocus, numberOfQuestions } = req.body;
@@ -82,4 +111,5 @@ const generateConceptExplanation = async (req, res) => {
 module.exports = {
   generateInterviewQuestions,
   generateConceptExplanation,
+  chatWithGemini
 };

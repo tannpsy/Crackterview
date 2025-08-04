@@ -11,6 +11,8 @@ import { API_PATHS } from "../../utils/apiPaths";
 import QuestionCard from "../../components/cards/QuestionCard";
 import SpinnerLoader from "../../components/loader/SpinnerLoader";
 import PartnerFooter from "../../components/PartnerFooter";
+import ChatbotForm from "../../components/ChatbotForm";
+import ChatBubble from "../../components/ChatbotBubble";
 
 const interviewPrep = () => {
   const {sessionId} = useParams();
@@ -23,6 +25,7 @@ const interviewPrep = () => {
 
   const [sessionData, setSessionData] = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
+  const [isChatbotOpen, setIsChatbotOpen] = useState(false);
 
   const [openLeanMoreDrawer, setOpenLeanMoreDrawer] = useState(false);
   const [explanation, setExplanation] = useState(null);
@@ -102,6 +105,10 @@ const interviewPrep = () => {
       setIsUpdateLoader(false)
     }
   };
+
+  const toggleChatbot = () => {
+        setIsChatbotOpen(!isChatbotOpen);
+    };
 
   useEffect(() => {
     if (sessionId) {
@@ -191,6 +198,15 @@ const interviewPrep = () => {
           </div>
         </div>
       </div>
+      {isChatbotOpen && (
+                      <div className="fixed bottom-28 right-[150px] z-50">
+                          <ChatbotForm onClose={toggleChatbot} />
+                      </div>
+                  )}
+      
+                  <div className="fixed bottom-20 right-8 z-50 cursor-pointer" onClick={toggleChatbot}>
+                      <ChatBubble />
+                  </div>
       <PartnerFooter/>
     </DashboardLayout>
   )

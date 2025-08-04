@@ -8,7 +8,7 @@ const authRoutes = require('./routes/authRoutes')
 const sessionRoutes = require('./routes/sessionRoutes')
 const questionRoutes = require('./routes/questionRoutes')
 const {protect} = require("./middlewares/authMiddleware")
-const {generateInterviewQuestions, generateConceptExplanation} = require("./controllers/aiController")
+const {generateInterviewQuestions, generateConceptExplanation, chatWithGemini} = require("./controllers/aiController")
 
 
 const app = express();
@@ -34,6 +34,7 @@ app.use("/api/questions", questionRoutes);
 
 app.use("/api/ai/generate-questions", protect, generateInterviewQuestions);
 app.use("/api/ai/generate-explanation", protect, generateConceptExplanation);
+app.post("/api/ai/chat", protect, chatWithGemini);
 
 
 // Serve uploads folder

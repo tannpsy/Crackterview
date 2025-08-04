@@ -11,12 +11,11 @@ export default function ChatBubble({ className = "" }) {
       {/* Chat Bubble Background */}
       <svg
         width="100"
-        height="109"
+        height="100"
         viewBox="0 0 100 109"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         className="drop-shadow-[0_10px_4px_rgba(0,0,0,0.3)]"
-        style={{ backdropFilter: 'blur(50px)' }}
         aria-hidden="true"
       >
         <defs>

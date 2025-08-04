@@ -87,6 +87,7 @@ const Dashboard = () => {
     }, []);
 
     return (
+        <>
         <DashboardLayout>
             <div className="container mx-auto pt-4 pb-4">
                 <div className="flex items-center justify-between px-4 md:px-0 pb-6">
@@ -133,16 +134,17 @@ const Dashboard = () => {
             </Modal>
 
             {isChatbotOpen && (
-                <div className="fixed bottom-28 right-[150px] z-50">
+                <div className="fixed bottom-20 right-[130px] z-50">
                     <ChatbotForm onClose={toggleChatbot} />
                 </div>
             )}
 
-            <div className="fixed bottom-20 right-8 z-50 cursor-pointer" onClick={toggleChatbot}>
+            <div className="fixed bottom-5 right-5 z-50 cursor-pointer" onClick={toggleChatbot}>
                 <ChatBubble />
             </div>
-            <PartnerFooter/>
         </DashboardLayout>
+        <PartnerFooter/>
+        </>
     );
 };
 
