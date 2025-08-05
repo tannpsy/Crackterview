@@ -55,7 +55,7 @@ const handleSubmit = async (e) => {
     }
 
     alert("Registration successful!");
-    navigate("/dashboard");
+    navigate("/");
   } catch (err) {
     alert(err.message);
   }

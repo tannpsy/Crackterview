@@ -9,6 +9,15 @@ import passport from './config/passport.js';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 
+// --- Userside logic ---
+import userAuthRoutes from './usersidebackend/routes/authRoutes.js';
+import sessionRoutes from './usersidebackend/routes/sessionRoutes.js';
+import questionRoutes from './usersidebackend/routes/questionRoutes.js';
+
+
+import { chatWithGemini, generateInterviewQuestions, generateConceptExplanation } from './usersidebackend/controllers/aiController.js';
+import { protect } from './usersidebackend/middlewares/authMiddleware.js';
+
 dotenv.config();
 
 const app = express();
@@ -49,6 +58,17 @@ app.use('/api/auth', authRouter);
 app.use('/api/users', userRoutes);
 app.use('/api/interviews', interviewRouter); // <--- AKTIFKAN KEMBALI INI
 app.use('/api/dashboard', dashboardRouter); // <--- TAMBAH INI
+
+
+app.use('/user/api/auth', userAuthRoutes);
+app.use('/user/api/sessions', sessionRoutes);
+app.use('/user/api/questions', questionRoutes);
+
+app.post('/user/api/ai/chat', protect, chatWithGemini);
+app.use('/user/api/ai/generate-questions', protect, generateInterviewQuestions);
+app.use('/user/api/ai/generate-explanation', protect, generateConceptExplanation);
+
+
 
 // Middleware penanganan error global
 app.use((err, req, res, next) => {
