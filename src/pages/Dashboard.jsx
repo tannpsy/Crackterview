@@ -22,11 +22,33 @@ export default function Dashboard() {
   const [candidateCount, setCandidateCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilterForm, setShowFilterForm] = useState(false);
+  const [filters, setFilters] = useState({ status: null, feedback: null, startDate: null, endDate: null });
   const [activeMenu, setActiveMenu] = useState(null);
   const [showEditForm, setShowEditForm] = useState(false);
   const [candidateToEdit, setCandidateToEdit] = useState(null);
+  const [selectedCandidates, setSelectedCandidates] = useState([]);
+  const [isAllSelected, setIsAllSelected] = useState(false);
 
   const pageSize = 5;
+
+  const handleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedCandidates([]);
+    } else {
+      setSelectedCandidates(paginatedCandidates.map((c) => c._id));
+    }
+    setIsAllSelected(!isAllSelected);
+  };
+
+  const handleSelectCandidate = (candidateId) => {
+    setSelectedCandidates((prevSelected) => {
+      if (prevSelected.includes(candidateId)) {
+        return prevSelected.filter((id) => id !== candidateId);
+      } else {
+        return [...prevSelected, candidateId];
+      }
+    });
+  };
 
   const handleEditCandidate = (candidate) => {
     setCandidateToEdit(candidate);
@@ -35,23 +57,18 @@ export default function Dashboard() {
   };
 
   const handleDeleteCandidate = async (candidate) => {
-    // Tampilkan dialog konfirmasi
     if (window.confirm(`Are you sure you want to delete candidate ${candidate.name}?`)) {
       try {
         await axios.delete(`/api/dashboard/candidates/${candidate._id}`, { withCredentials: true });
         toast.success(`${candidate.name} has been deleted successfully!`);
-        
-        // Perbarui daftar kandidat di frontend
+
         setCandidates(candidates.filter(c => c._id !== candidate._id));
         setCandidateCount(prevCount => prevCount - 1);
-        
-        // Tutup menu dropdown
+
         setActiveMenu(null);
-        
-        // Perbarui statistik
+
         fetchStats();
-        
-        // Sesuaikan halaman jika halaman saat ini kosong
+
         if (paginatedCandidates.length === 1 && currentPage > 1) {
           setCurrentPage(currentPage - 1);
         }
@@ -64,11 +81,16 @@ export default function Dashboard() {
 
   const filteredCandidates = candidates.filter((candidate) => {
     const query = searchQuery.toLowerCase();
-    return (
+    const matchesSearch = (
       (candidate.name && candidate.name.toLowerCase().includes(query)) ||
-      (candidate.email && candidate.email.toLowerCase().includes(query)) ||
       (candidate.position && candidate.position.toLowerCase().includes(query))
     );
+    const matchesStatus = !filters.status || filters.status === "All" || (candidate.status || "Unreviewed") === filters.status;
+    const matchesFeedback = !filters.feedback || filters.feedback === "All" || (candidate.feedback ?? "Need Review") === filters.feedback;
+    const matchesDate = (!filters.startDate || (candidate.appliedDate && new Date(candidate.appliedDate) >= new Date(filters.startDate))) &&
+                       (!filters.endDate || (candidate.appliedDate && new Date(candidate.appliedDate) <= new Date(filters.endDate)));
+    
+    return matchesSearch && matchesStatus && matchesFeedback && matchesDate;
   });
 
   const paginatedCandidates = filteredCandidates.slice(
@@ -137,22 +159,29 @@ export default function Dashboard() {
     if (e.key === "Escape") {
         setShowForm(false);
         setShowEditForm(false);
+        setShowFilterForm(false);
     }
   }, []);
 
   useEffect(() => {
     fetchStats();
     fetchCandidates();
-  }, [fetchCandidates]);
+  }, [fetchCandidates, filters, searchQuery]);
 
   useEffect(() => {
-    if (showForm || showEditForm) {
+    const paginatedIds = paginatedCandidates.map(c => c._id);
+    const allOnPageSelected = paginatedIds.length > 0 && paginatedIds.every(id => selectedCandidates.includes(id));
+    setIsAllSelected(allOnPageSelected);
+  }, [selectedCandidates, paginatedCandidates]);
+
+  useEffect(() => {
+    if (showForm || showEditForm || showFilterForm) {
       document.addEventListener("keydown", handleKeyDown);
     } else {
       document.removeEventListener("keydown", handleKeyDown);
     }
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [showForm, showEditForm, handleKeyDown]);
+  }, [showForm, showEditForm, showFilterForm, handleKeyDown]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -217,14 +246,17 @@ export default function Dashboard() {
     setCurrentPage(1);
   };
 
-  const handleFilterApply = (filters) => {
-    console.log("Applying filters:", filters);
+  const handleFilterApply = (newFilters) => {
+    setFilters(newFilters);
+    setCurrentPage(1);
     setShowFilterForm(false);
   };
 
   return (
-    <div className="w-full max-w-[1315px] mx-auto">
-      <DashboardHeader />
+    <div className="min-h-screen bg-white">
+        <DashboardHeader />
+    <div className="w-full max-w-[1315px] mx-auto min-h-screen bg-white mt-5" >
+
       <br />
       <div className="bg-white rounded-[40px] border border-[#D9D9D9] shadow p-4 sm:p-6 lg:p-8">
         <div className="max-w-[1280px] mx-auto">
@@ -246,7 +278,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="mt-12 bg-white rounded-[40px] border border-[#D9D9D9] shadow-[0_4px_4px_rgba(0,0,0,0.25)] p-6">
+      <div className="mt-12 bg-white rounded-[40px] border border-[#D9D9D9] shadow-[0_4px_4px_rgba(0,0,0,0.25)] p-6 mb-10">
         <h2 className="text-[28px] font-bold text-black mb-6 font-montserrat">Candidates</h2>
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
@@ -255,8 +287,8 @@ export default function Dashboard() {
             <div className="relative flex-1">
               <input
                 type="text"
-                placeholder="Search Candidates"
-                className="w-full pl-4 pr-10 py-2 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300"
+                placeholder="Search [Candidate][Position]"
+                className="w-full pl-4 pr-10 py-1 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300"
                 value={searchQuery}
                 onChange={handleSearchChange}
               />
@@ -274,13 +306,13 @@ export default function Dashboard() {
           <div className="flex flex-wrap gap-4 justify-end items-center">
             <button
               onClick={handleDownload}
-              className="px-6 py-2.5 rounded-full border text-[#1976D2] border-[#1976D2] text-sm flex items-center gap-3 hover:bg-[#1565C0] hover:text-white hover:border-[#1565C0] transition-colors min-w-[140px] justify-center"
+              className="px-4 rounded-md mr-5 bg-[#1976D2] text-white text-sm flex items-center gap-3 hover:bg-[#1565C0] transition-colors min-w-[120px] justify-center"
             >
               <DownloadIcon />
               <span>Download</span>
             </button>
             <button
-              className="px-6 py-2.5 rounded-full bg-[#1976D2] text-white text-sm flex items-center gap-3 hover:bg-[#1565C0] transition-colors min-w-[160px] justify-center"
+              className="px-4 rounded-md mr-5 bg-[#1976D2] text-white text-sm flex items-center gap-3 hover:bg-[#1565C0] transition-colors min-w-[120px] justify-center"
               onClick={() => setShowForm(true)}
             >
               <AddIcon />
@@ -288,7 +320,7 @@ export default function Dashboard() {
             </button>
             <button
               onClick={() => setShowFilterForm(true)}
-              className="px-6 py-2.5 rounded-full border text-gray-400 border-gray-300 text-sm flex items-center gap-3 hover:text-gray-600 hover:border-gray-400 transition-colors min-w-[160px] justify-center"
+              className="px-4 rounded-md border text-gray-400 border-gray-300 text-sm flex items-center gap-3 hover:text-gray-600 hover:border-gray-400 transition-colors min-w-[120px] justify-center"
             >
               <FilterIcon />
               <span>Filter Candidates</span>
@@ -311,6 +343,7 @@ export default function Dashboard() {
                   <FilterCandidate
                     onClose={() => setShowFilterForm(false)}
                     onApplyFilter={handleFilterApply}
+                    initialFilters={filters}
                   />
                 </div>
               </div>
@@ -328,183 +361,199 @@ export default function Dashboard() {
             </div>
           )}
         </div>
-        <div className="overflow-auto">
-          <table className="min-w-full text-sm border-collapse">
-            <thead className="text-black-b border-gray-300">
-              <tr>
-                <th className="text-left py-3 px-2">
-                  <input type="checkbox" />
-                </th>
-                <th className="text-left py-3 px-2">
-                  <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700">
-                    <ChevronDown size={16} />
-                    <span>Name</span>
-                    <ArrowUpDown size={16} />
-                  </div>
-                </th>
-                <th className="text-left py-3 px-2">
-                  <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700">
-                    <span>Position</span>
-                    <ArrowUpDown size={16} />
-                  </div>
-                </th>
-                <th className="text-left py-3 px-2">
-                  <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700">
-                    <span>Applied Date</span>
-                    <ArrowUpDown size={16} />
-                  </div>
-                </th>
-                <th className="text-left py-3 px-2">
-                  <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700">
-                    <span>Status</span>
-                    <ArrowUpDown size={16} />
-                  </div>
-                </th>
-                <th className="text-left py-3 px-2">
-                  <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700">
-                    <span>AI Score</span>
-                    <ArrowUpDown size={16} />
-                  </div>
-                </th>
-                <th className="text-left py-3 px-2">
-                  <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700">
-                    <span>HR Rating</span>
-                    <ArrowUpDown size={16} />
-                  </div>
-                </th>
-                <th className="text-left py-3 px-2">
-                  <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700">
-                    <span>Send Email</span>
-                    <ArrowUpDown size={16} />
-                  </div>
-                </th>
-                <th className="py-3 px-2"></th>
-              </tr>
-            </thead>
-            <tbody className="text-gray-700">
-              {loadingCandidates ? (
+          <div className="overflow-auto ">
+            <table className="min-w-full text-sm border-collapse">
+              <thead className="text-black border-b border-gray-300">
                 <tr>
-                  <td colSpan="9" className="text-center py-6 text-gray-500">
-                    Loading candidates...
-                  </td>
+                  <th className="text-left py-3 px-2">
+                    <input
+                      type="checkbox"
+                      onChange={handleSelectAll}
+                      checked={isAllSelected && paginatedCandidates.length > 0}
+                      ref={(input) => {
+                        if (input) {
+                          const paginatedIds = paginatedCandidates.map((c) => c._id);
+                          const someSelected = paginatedIds.some((id) => selectedCandidates.includes(id));
+                          const allSelected = paginatedIds.every((id) => selectedCandidates.includes(id));
+                          input.indeterminate = someSelected && !allSelected;
+                        }
+                      }}
+                    />
+                  </th>
+                  <th className="text-left py-3 px-2">
+                    <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700">
+                      <ChevronDown size={16} />
+                      <span>Name</span>
+                      <ArrowUpDown size={16} />
+                    </div>
+                  </th>
+                  <th className="text-left py-3 px-2">
+                    <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700">
+                      <span>Position</span>
+                      <ArrowUpDown size={16} />
+                    </div>
+                  </th>
+                  <th className="text-left py-3 px-2">
+                    <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700">
+                      <span>Applied Date</span>
+                      <ArrowUpDown size={16} />
+                    </div>
+                  </th>
+                  <th className="text-left py-3 px-2">
+                    <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700">
+                      <span>Status</span>
+                      <ArrowUpDown size={16} />
+                    </div>
+                  </th>
+                  <th className="text-left py-3 px-2">
+                    <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700">
+                      <span>AI Score</span>
+                      <ArrowUpDown size={16} />
+                    </div>
+                  </th>
+                  <th className="text-left py-3 px-2">
+                    <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700">
+                      <span>HR Rating</span>
+                      <ArrowUpDown size={16} />
+                    </div>
+                  </th>
+                  <th className="text-left py-3 px-2">
+                    <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700">
+                      <span>Send Email</span>
+                      <ArrowUpDown size={16} />
+                    </div>
+                  </th>
+                  <th className="py-3 px-2"></th>
                 </tr>
-              ) : paginatedCandidates.length === 0 ? (
-                <tr>
-                  <td colSpan="9" className="text-center py-6 text-gray-500">
-                    No candidates found
-                  </td>
-                </tr>
-              ) : (
-                paginatedCandidates.map((c, i) => {
-                  const status = c.status || "Unreviewed";
-                  const score = c.score ?? Math.floor(Math.random() * 40) + 60;
-                  const rating = c.rating ?? "0.0";
-                  const feedback = c.feedback ?? "Need Review";
-                  const statusColor = status === "Reviewed" ? "text-green-600" : "text-red-500";
-                  const feedbackColor =
-                    feedback === "Sent"
-                      ? "text-green-600"
-                      : feedback === "Need Review"
-                      ? "text-red-500"
-                      : "text-blue-600 underline cursor-pointer";
+              </thead>
+              <tbody className="text-gray-700">
+                {loadingCandidates ? (
+                  <tr>
+                    <td colSpan="9" className="text-center py-6 text-gray-500">
+                      Loading candidates...
+                    </td>
+                  </tr>
+                ) : paginatedCandidates.length === 0 ? (
+                  <tr>
+                    <td colSpan="9" className="text-center py-6 text-gray-500">
+                      No candidates found
+                    </td>
+                  </tr>
+                ) : (
+                  paginatedCandidates.map((c, i) => {
+                    const status = c.status || "Unreviewed";
+                    const score = c.score ?? Math.floor(Math.random() * 40) + 60;
+                    const rating = c.rating ?? "0.0";
+                    const feedback = c.feedback ?? "Need Review";
+                    const statusColor = status === "Reviewed" ? "text-green-600" : "text-red-500";
+                    const feedbackColor =
+                      feedback === "Sent"
+                        ? "text-green-600"
+                        : feedback === "Need Review"
+                        ? "text-red-500"
+                        : "text-blue-600 underline cursor-pointer";
 
-                  return (
-                    <tr key={c._id || i} className="border-b border-gray-200 hover:bg-gray-50">
-                      <td className="py-3 px-2">
-                        <input type="checkbox" />
-                      </td>
-                      <td className="py-3 px-2 flex items-center gap-3">
-                        <img
-                          src={`https://i.pravatar.cc/32?u=${c.name || c.email}`}
-                          alt="avatar"
-                          className="w-8 h-8 rounded-full"
-                        />
-                        <div>
-                          <div className="font-semibold text-black">{c.name}</div>
-                          <div className="text-xs text-gray-500">{c.email}</div>
-                        </div>
-                      </td>
-                      <td className="py-3 px-2">{c.position}</td>
-                      <td className="py-3 px-2">
-                        {c.appliedDate ? new Date(c.appliedDate).toLocaleDateString() : "-"}
-                      </td>
-                      <td className={`py-3 px-2 font-semibold ${statusColor}`}>{status}</td>
-                      <td className="py-3 px-2 font-bold">{score}/100</td>
-                      <td className="py-3 px-2 font-bold">{rating}/5.0</td>
-                      <td
-                        className={`py-3 px-2 font-semibold ${feedbackColor}`}
-                        onClick={() => {
-                          if (feedback !== "Sent") setSelectedCandidate(c);
-                        }}
-                      >
-                        {feedback}
-                      </td>
-                      <td className="py-3 px-2 relative">
-                        <div
-                          className={`menu-container-${c._id}`}
-                          onClick={(e) => e.stopPropagation()}
+                    return (
+                      <tr key={c._id || i} className="border-b border-gray-200 hover:bg-gray-50">
+                        <td className="py-3 px-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCandidates.includes(c._id)}
+                            onChange={() => handleSelectCandidate(c._id)}
+                          />
+                        </td>
+                        <td className="py-3 px-2 flex items-center gap-3">
+                          <img
+                            src={`https://i.pravatar.cc/32?u=${c.name || c.email}`}
+                            alt="avatar"
+                            className="w-8 h-8 rounded-full"
+                          />
+                          <div>
+                            <div className="font-semibold text-black">{c.name}</div>
+                            <div className="text-xs text-gray-500">{c.email}</div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-2">{c.position}</td>
+                        <td className="py-3 px-2">
+                          {c.appliedDate ? new Date(c.appliedDate).toLocaleDateString() : "-"}
+                        </td>
+                        <td className={`py-3 px-2 font-semibold ${statusColor}`}>{status}</td>
+                        <td className="py-3 px-2 font-bold">{score}/100</td>
+                        <td className="py-3 px-2 font-bold">{rating}/5.0</td>
+                        <td
+                          className={`py-3 px-2 font-semibold ${feedbackColor}`}
+                          onClick={() => {
+                            if (feedback !== "Sent") setSelectedCandidate(c);
+                          }}
                         >
-                          <button
-                            onClick={() => setActiveMenu(activeMenu === c._id ? null : c._id)}
-                            className="p-1 rounded-full hover:bg-gray-200"
+                          {feedback}
+                        </td>
+                        <td className="py-3 px-2 relative">
+                          <div
+                            className={`menu-container-${c._id}`}
+                            onClick={(e) => e.stopPropagation()}
                           >
-                            <MoreVertical size={16} />
-                          </button>
-                          {activeMenu === c._id && (
-                            <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
-                              <div
-                                className="py-1"
-                                role="menu"
-                                aria-orientation="vertical"
-                                aria-labelledby="options-menu"
-                              >
-                                <button
-                                  onClick={() => handleEditCandidate(c)}
-                                  className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
-                                  role="menuitem"
+                            <button
+                              onClick={() => setActiveMenu(activeMenu === c._id ? null : c._id)}
+                              className="p-1 rounded-full hover:bg-gray-200"
+                            >
+                              <MoreVertical size={16} />
+                            </button>
+                            {activeMenu === c._id && (
+                              <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
+                                <div
+                                  className="py-1"
+                                  role="menu"
+                                  aria-orientation="vertical"
+                                  aria-labelledby="options-menu"
                                 >
-                                  <Pencil size={16} />
-                                  <span>Edit Candidate</span>
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteCandidate(c)}
-                                  className="flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-gray-100 w-full text-left"
-                                  role="menuitem"
-                                >
-                                  <Trash2 size={16} />
-                                  <span>Delete Candidate</span>
-                                </button>
+                                  <button
+                                    onClick={() => handleEditCandidate(c)}
+                                    className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+                                    role="menuitem"
+                                  >
+                                    <Pencil size={16} />
+                                    <span>Edit Candidate</span>
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteCandidate(c)}
+                                    className="flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-gray-100 w-full text-left"
+                                    role="menuitem"
+                                  >
+                                    <Trash2 size={16} />
+                                    <span>Delete Candidate</span>
+                                  </button>
+                                </div>
                               </div>
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-        <div className="flex justify-between items-center mt-6 text-sm text-gray-500">
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        <div className="flex justify-center items-center mt-6 text-sm text-gray-500 space-x-2">
           <button
             onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
             disabled={currentPage === 1}
-            className={`hover:underline disabled:opacity-50 ${
+            className={`px-3 py-1 hover:underline disabled:opacity-50 ${
               currentPage > 1 ? "font-bold" : "font-normal"
             }`}
           >
             ← Previous
           </button>
 
-          <div className="flex gap-2 items-center">
+          <div className="flex gap-1 items-center">
             {Array.from({ length: Math.ceil(filteredCandidates.length / pageSize) }, (_, i) => i + 1)
               .slice(0, 5)
               .map((num) => (
                 <button
                   key={num}
                   onClick={() => setCurrentPage(num)}
-                  className={`px-3 py-1 rounded-full ${
+                  className={`px-3 py-1 rounded-md ${
                     num === currentPage ? "bg-black text-white" : "hover:bg-gray-200 text-gray-700"
                   }`}
                 >
@@ -520,8 +569,8 @@ export default function Dashboard() {
               )
             }
             disabled={currentPage * pageSize >= filteredCandidates.length}
-            className={`hover:underline disabled:opacity-50 ${
-              currentPage === 1 ? "font-bold" : "font-normal"
+            className={`px-3 py-1 hover:underline disabled:opacity-50 ${
+              currentPage * pageSize < filteredCandidates.length ? "font-bold" : "font-normal"
             }`}
           >
             Next →
@@ -530,6 +579,7 @@ export default function Dashboard() {
       </div>
 
       <PartnerFooter />
+    </div>
     </div>
   );
 }
