@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const CalendarIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -12,29 +12,50 @@ const ResetIcon = () => (
   </svg>
 );
 
-export default function FilterCandidate({ onClose, onApplyFilter }) {
+export default function FilterCandidate({ onClose, onApplyFilter, initialFilters }) {
+  // Map initialFilters to local state
   const [filters, setFilters] = useState({
     statusCandidate: {
-      all: false,
-      reviewed: false,
-      unreviewed: false
+      all: !initialFilters?.status,
+      reviewed: initialFilters?.status === "Reviewed",
+      unreviewed: initialFilters?.status === "Unreviewed"
     },
     sendEmail: {
-      all: false,
-      sent: false,
-      needReview: false
+      all: !initialFilters?.feedback,
+      sent: initialFilters?.feedback === "Sent",
+      needReview: initialFilters?.feedback === "Need Review"
     },
     timeOfApplication: {
-      startDate: '',
-      endDate: ''
+      startDate: initialFilters?.startDate || '',
+      endDate: initialFilters?.endDate || ''
     }
   });
+
+  // Update local state if initialFilters changes (when reopening)
+  useEffect(() => {
+    setFilters({
+      statusCandidate: {
+        all: !initialFilters?.status,
+        reviewed: initialFilters?.status === "Reviewed",
+        unreviewed: initialFilters?.status === "Unreviewed"
+      },
+      sendEmail: {
+        all: !initialFilters?.feedback,
+        sent: initialFilters?.feedback === "Sent",
+        needReview: initialFilters?.feedback === "Need Review"
+      },
+      timeOfApplication: {
+        startDate: initialFilters?.startDate || '',
+        endDate: initialFilters?.endDate || ''
+      }
+    });
+  }, [initialFilters]);
 
   const handleCheckboxChange = (group, key) => {
     setFilters(prev => ({
       ...prev,
       [group]: {
-        ...prev[group],
+        ...Object.fromEntries(Object.keys(prev[group]).map(k => [k, false])), // only one true at a time
         [key]: !prev[group][key]
       }
     }));
@@ -52,94 +73,116 @@ export default function FilterCandidate({ onClose, onApplyFilter }) {
 
   const handleResetAll = () => {
     setFilters({
-      statusCandidate: { all: false, reviewed: false, unreviewed: false },
-      sendEmail: { all: false, sent: false, needReview: false },
+      statusCandidate: { all: true, reviewed: false, unreviewed: false },
+      sendEmail: { all: true, sent: false, needReview: false },
       timeOfApplication: { startDate: '', endDate: '' }
     });
   };
 
+  // Map local state to Dashboard's filter shape
+  const handleApply = () => {
+    const mappedFilters = {
+      status:
+        filters.statusCandidate.reviewed
+          ? "Reviewed"
+          : filters.statusCandidate.unreviewed
+          ? "Unreviewed"
+          : null,
+      feedback:
+        filters.sendEmail.sent
+          ? "Sent"
+          : filters.sendEmail.needReview
+          ? "Need Review"
+          : null,
+      startDate: filters.timeOfApplication.startDate || null,
+      endDate: filters.timeOfApplication.endDate || null
+    };
+    onApplyFilter(mappedFilters);
+  };
+
   return (
     <div className="p-4 w-[280px] bg-white">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-4">
-        <h2 className="text-base font-bold">Filter</h2> 
+      {/* Header */}
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-base font-bold">Filter</h2>
         <button onClick={onClose} className="text-gray-500 hover:text-gray-700">✕</button>
-        </div>
+      </div>
 
-        {/* Filter Sections */}
-        <div className="space-y-4 mb-4">
+      {/* Filter Sections */}
+      <div className="space-y-4 mb-4">
         {/* Status */}
         <div>
-            <h3 className="text-sm font-semibold mb-2">Status</h3>
-            <div className="space-y-1">
+          <h3 className="text-sm font-semibold mb-2">Status</h3>
+          <div className="space-y-1">
             {Object.keys(filters.statusCandidate).map(key => (
-                <label key={key} className="flex items-center gap-2">
+              <label key={key} className="flex items-center gap-2">
                 <input
-                    type="checkbox"
-                    checked={filters.statusCandidate[key]}
-                    onChange={() => handleCheckboxChange('statusCandidate', key)}
-                    className="w-4 h-4 rounded"></input>
-                <span className="text-sm capitalize">{key}</span> 
-                </label>
+                  type="checkbox"
+                  checked={filters.statusCandidate[key]}
+                  onChange={() => handleCheckboxChange('statusCandidate', key)}
+                  className="w-4 h-4 rounded"
+                />
+                <span className="text-sm capitalize">{key}</span>
+              </label>
             ))}
-            </div>
+          </div>
         </div>
 
         {/* Email Status */}
         <div>
-            <h3 className="text-sm font-semibold mb-2">Email Status</h3> 
-            <div className="space-y-1">
+          <h3 className="text-sm font-semibold mb-2">Email Status</h3>
+          <div className="space-y-1">
             {Object.keys(filters.sendEmail).map(key => (
-                <label key={key} className="flex items-center gap-2">
+              <label key={key} className="flex items-center gap-2">
                 <input
-                    type="checkbox"
-                    checked={filters.sendEmail[key]}
-                    onChange={() => handleCheckboxChange('sendEmail', key)}
-                    className="w-4 h-4 rounded" 
+                  type="checkbox"
+                  checked={filters.sendEmail[key]}
+                  onChange={() => handleCheckboxChange('sendEmail', key)}
+                  className="w-4 h-4 rounded"
                 />
-                <span className="text-sm capitalize"> 
-                    {key === 'needReview' ? 'Need Review' : key}
+                <span className="text-sm capitalize">
+                  {key === 'needReview' ? 'Need Review' : key}
                 </span>
-                </label>
+              </label>
             ))}
-            </div>
+          </div>
         </div>
 
         {/* Date Range */}
         <div>
-            <h3 className="text-sm font-semibold mb-2">Date Range</h3>
-            <div className="space-y-2">
+          <h3 className="text-sm font-semibold mb-2">Date Range</h3>
+          <div className="space-y-2">
             <input
-                type="date"
-                value={filters.timeOfApplication.startDate}
-                onChange={(e) => handleDateChange('startDate', e.target.value)}
-                className="w-full text-sm p-1.5 border rounded"
+              type="date"
+              value={filters.timeOfApplication.startDate}
+              onChange={(e) => handleDateChange('startDate', e.target.value)}
+              className="w-full text-sm p-1.5 border rounded"
             />
             <input
-                type="date"
-                value={filters.timeOfApplication.endDate}
-                onChange={(e) => handleDateChange('endDate', e.target.value)}
-                className="w-full text-sm p-1.5 border rounded" 
+              type="date"
+              value={filters.timeOfApplication.endDate}
+              onChange={(e) => handleDateChange('endDate', e.target.value)}
+              className="w-full text-sm p-1.5 border rounded"
             />
-            </div>
+          </div>
         </div>
-        </div>
+      </div>
 
-        {/* Actions */}
-        <div className="space-y-2">
+      {/* Actions */}
+      <div className="space-y-2">
         <button
-            onClick={() => onApplyFilter(filters)}
-            className="w-full px-3 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700" 
+          onClick={handleApply}
+          className="w-full px-3 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
         >
-            Apply
+          Apply
         </button>
         <button
-            onClick={handleResetAll}
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 flex items-center justify-center gap-1"
+          onClick={handleResetAll}
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 flex items-center justify-center gap-1"
         >
-            <ResetIcon /> Reset
+          <ResetIcon /> Reset
         </button>
-        </div>
+      </div>
     </div>
-    );
+  );
 }

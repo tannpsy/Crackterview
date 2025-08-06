@@ -87,9 +87,18 @@ export default function Dashboard() {
     );
     const matchesStatus = !filters.status || filters.status === "All" || (candidate.status || "Unreviewed") === filters.status;
     const matchesFeedback = !filters.feedback || filters.feedback === "All" || (candidate.feedback ?? "Need Review") === filters.feedback;
-    const matchesDate = (!filters.startDate || (candidate.appliedDate && new Date(candidate.appliedDate) >= new Date(filters.startDate))) &&
-                       (!filters.endDate || (candidate.appliedDate && new Date(candidate.appliedDate) <= new Date(filters.endDate)));
-    
+    // const matchesDate = (!filters.startDate || (candidate.appliedDate && new Date(candidate.appliedDate) >= new Date(filters.startDate))) &&
+    //                    (!filters.endDate || (candidate.appliedDate && new Date(candidate.appliedDate) <= new Date(filters.endDate)));
+    const matchesDate =
+    (!filters.startDate || (candidate.appliedDate && new Date(candidate.appliedDate) >= new Date(filters.startDate))) &&
+    (!filters.endDate ||
+      (candidate.appliedDate && new Date(candidate.appliedDate) < addOneDay(filters.endDate)));
+
+  function addOneDay(dateStr) {
+    const date = new Date(dateStr);
+    date.setDate(date.getDate() + 1);
+    return date;
+  }
     return matchesSearch && matchesStatus && matchesFeedback && matchesDate;
   });
 
