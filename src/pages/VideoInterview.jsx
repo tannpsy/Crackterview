@@ -63,7 +63,7 @@ const CircularProgress = ({ percentage, size = 70, color, label, value }) => {
   );
 };
 
-const StarRating = ({ rating, maxRating = 5, size = 20 }) => (
+const StarRating = ({ rating, maxRating = 5, size = 20, onRatingChange }) => (
   <div className="flex items-center gap-1">
     {Array.from({ length: maxRating }, (_, index) => (
       <Star
@@ -71,9 +71,10 @@ const StarRating = ({ rating, maxRating = 5, size = 20 }) => (
         size={size}
         className={
           index < rating
-            ? "fill-yellow-400 text-yellow-400"
-            : "fill-none text-gray-800"
+            ? "fill-yellow-400 text-yellow-400 cursor-pointer"
+            : "fill-none text-gray-800 cursor-pointer"
         }
+        onClick={() => onRatingChange(index + 1)}
       />
     ))}
   </div>
@@ -83,8 +84,22 @@ export default function VideoInterview() {
   const [feedbackNote, setFeedbackNote] = useState("");
   const [isPlaying, setIsPlaying] = useState(false);
   const [interview, setInterview] = useState(null);
+  const [loading, setLoading] = useState(true);
   const { interviewId } = useParams();
   const videoRef = React.useRef(null);
+  const [ratings, setRatings] = useState({
+    fitForPosition: 0,
+    cultureFit: 0,
+    motivation: 0,
+    futurePotential: 0,
+  });
+
+  const handleRatingChange = (category, newRating) => {
+    setRatings((prevRatings) => ({
+      ...prevRatings,
+      [category]: newRating,
+    }));
+  };
 
   const handlePlayClick = () => {
     if (videoRef.current) {
@@ -97,43 +112,41 @@ export default function VideoInterview() {
     }
   };
 
- useEffect(() => {
-  async function fetchInterview() {
-    try {
-      const res = await fetch(`/api/interviews/${interviewId}`);
-      if (!res.ok) {
-        const text = await res.text(); 
-        console.error("Non-200 response:", text);
-        throw new Error(`Server responded with ${res.status}`);
+  useEffect(() => {
+    async function fetchInterview() {
+      try {
+        const res = await fetch(`/api/interviews/${interviewId}`);
+        if (!res.ok) {
+          const text = await res.text();
+          console.error("Non-200 response:", text);
+          throw new Error(`Server responded with ${res.status}`);
+        }
+
+        const data = await res.json();
+        setInterview(data);
+      } catch (err) {
+        console.error("Failed to fetch interview data", err);
+      } finally {
+        setLoading(false);
       }
-
-      const data = await res.json();
-      setInterview(data);
-    } catch (err) {
-      console.error("Failed to fetch interview data", err);
-    } finally {
-      setLoading(false);
     }
-  }
 
-  fetchInterview();
-}, [interviewId]);
+    fetchInterview();
+  }, [interviewId]);
 
-
-  if (!interview) {
+  if (loading) {
     return <div className="text-center mt-20">Loading interview data...</div>;
   }
 
-  const candidate = interview?.candidateId;
+  const { candidateId: candidate, overallAiScore, overallAiFeedback, recordingUrl, aiScores } = interview;
   const appliedDate = new Date(candidate?.appliedDate).toLocaleDateString();
-  const aiScore = interview?.overallAiScore || 0;
-  const aiFeedback = interview?.overallAiFeedback || "No feedback available yet.";
-  const videoSrc = interview?.recordingUrl || null;
+  const videoSrc = recordingUrl || null;
+  const allAiScores = aiScores || {};
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-100">
       <Header />
-      <main className="flex flex-1 flex-col lg:flex-row lg:gap-5 mb-10 mt-10">
+      <main className="flex flex-1 flex-col p-5 lg:flex-row lg:gap-5 mb-10 mt-10">
         <div className="w-full max-w-sm rounded-lg border border-gray-300 bg-white shadow-lg lg:mb-0">
           <div className="p-4">
             <h3 className="font-['DM_Sans'] text-xl font-semibold text-black">Candidate Profile</h3>
@@ -160,51 +173,51 @@ export default function VideoInterview() {
           </div>
         </div>
 
-        <div className="flex flex-1 flex-col gap-10">
+        <div className="flex flex-1 flex-col gap-10 mt-5 lg:mt-0">
           <div className="mx-auto w-full">
             <h3 className="mb-6 font-['DM_Sans'] text-xl font-semibold text-black">Video/Audio Interview</h3>
             <div className="relative overflow-hidden rounded-lg border-4 border-white bg-black shadow-lg">
               <div className="relative aspect-video bg-gray-900">
-  <div id="video-container" className="absolute inset-0" onClick={handlePlayClick}>
-    {videoSrc ? (
-      <video
-        ref={videoRef}
-        src={videoSrc}
-        className="h-full w-full object-cover"
-        controls={false}
-      />
-    ) : (
-      <div className="flex h-full w-full items-center justify-center text-white">
-        No video available
-      </div>
-    )}
-  </div>
+                <div id="video-container" className="absolute inset-0" onClick={handlePlayClick}>
+                  {videoSrc ? (
+                    <video
+                      ref={videoRef}
+                      src={videoSrc}
+                      className="h-full w-full object-cover"
+                      controls={false}
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-white">
+                      No video available
+                    </div>
+                  )}
+                </div>
 
-  {/* Center Play Button Overlay */}
-  <div
-    className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${
-      isPlaying ? "opacity-0 hover:opacity-100" : "opacity-100"
-    }`}
-  >
-    <div
-      className="flex h-16 w-16 items-center justify-center rounded-full bg-black bg-opacity-50 hover:bg-opacity-70 hover:scale-110 transition-all cursor-pointer"
-      onClick={handlePlayClick}
-    >
-      <Play className="ml-1 h-8 w-8 text-white" fill="white" />
-    </div>
-  </div>
+                {/* Center Play Button Overlay */}
+                <div
+                  className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${
+                    isPlaying ? "opacity-0 hover:opacity-100" : "opacity-100"
+                  }`}
+                >
+                  <div
+                    className="flex h-16 w-16 items-center justify-center rounded-full bg-black bg-opacity-50 hover:bg-opacity-70 hover:scale-110 transition-all cursor-pointer"
+                    onClick={handlePlayClick}
+                  >
+                    <Play className="ml-1 h-8 w-8 text-white" fill="white" />
+                  </div>
+                </div>
 
-  {/* Bottom Controls */}
-  <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between p-4 bg-black/30 text-white">
-    <button onClick={handlePlayClick}><Play /></button>
-    <SkipForward />
-    <Volume2 />
-    <Settings />
-    <PictureInPicture2 />
-    <Airplay />
-    <Maximize />
-  </div>
-</div>
+                {/* Bottom Controls */}
+                <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between p-4 bg-black/30 text-white">
+                  <button onClick={handlePlayClick}><Play /></button>
+                  <SkipForward />
+                  <Volume2 />
+                  <Settings />
+                  <PictureInPicture2 />
+                  <Airplay />
+                  <Maximize />
+                </div>
+              </div>
             </div>
           </div>
 
@@ -215,12 +228,12 @@ export default function VideoInterview() {
             <div className="p-6">
               <div className="grid grid-cols-4 gap-2">
                 <div className="col-span-1 space-y-20">
-                  <div><h4 className="mb-3 text-sm font-bold text-black">Fit for the Position</h4><StarRating rating={4} /></div>
-                  <div><h4 className="mb-3 text-sm font-bold text-black">Culture Fit</h4><StarRating rating={1} /></div>
+                  <div><h4 className="mb-3 text-sm font-bold text-black">Fit for the Position</h4><StarRating rating={ratings.fitForPosition} onRatingChange={(newRating) => handleRatingChange("fitForPosition", newRating)} /></div>
+                  <div><h4 className="mb-3 text-sm font-bold text-black">Culture Fit</h4><StarRating rating={ratings.cultureFit} onRatingChange={(newRating) => handleRatingChange("cultureFit", newRating)} /></div>
                 </div>
                 <div className="col-span-1 space-y-20">
-                  <div><h4 className="mb-3 text-sm font-bold text-black">Motivation</h4><StarRating rating={3} /></div>
-                  <div><h4 className="mb-3 text-sm font-bold text-black">Future Potential</h4><StarRating rating={4} /></div>
+                  <div><h4 className="mb-3 text-sm font-bold text-black">Motivation</h4><StarRating rating={ratings.motivation} onRatingChange={(newRating) => handleRatingChange("motivation", newRating)} /></div>
+                  <div><h4 className="mb-3 text-sm font-bold text-black">Future Potential</h4><StarRating rating={ratings.futurePotential} onRatingChange={(newRating) => handleRatingChange("futurePotential", newRating)} /></div>
                 </div>
                 <div className="col-span-2 space-y-6">
                   <div>
@@ -238,7 +251,7 @@ export default function VideoInterview() {
           </div>
         </div>
 
-        <div className="w-full max-w-sm">
+        <div className="w-full max-w-sm mt-5 lg:mt-0">
           <div className="rounded-lg border border-gray-300 bg-white shadow-lg">
             <div className="p-4">
               <h3 className="font-['DM_Sans'] text-xl font-semibold text-black">AI Interview Analysis</h3>
@@ -246,7 +259,7 @@ export default function VideoInterview() {
             <div className="space-y-6 p-4">
               <div>
                 <label className="mb-3 block text-sm font-bold text-black">AI Summary</label>
-                <div className="min-h-[200px] w-full rounded-md border border-gray-300 p-3 text-sm leading-relaxed text-gray-600">{aiFeedback}</div>
+                <div className="min-h-[200px] w-full rounded-md border border-gray-300 p-3 text-sm leading-relaxed text-gray-600">{overallAiFeedback}</div>
               </div>
               <div className="flex justify-center pt-4">
                 <button className="flex items-center gap-3 rounded-xl bg-black px-6 py-2 font-bold text-white shadow-lg transition-colors hover:bg-gray-800">
@@ -256,16 +269,21 @@ export default function VideoInterview() {
               </div>
               <div>
                 <label className="mb-4 block text-sm font-bold text-black">AI Score</label>
-                <div className="mb-6 flex justify-center">
-                  <CircularProgress percentage={aiScore} label="Overall" value={`${aiScore}%`} />
+                <div className="mb-6 grid grid-cols-3 gap-4">
+                  <CircularProgress percentage={overallAiScore} label="Overall" value={`${overallAiScore}%`} />
+                  <CircularProgress percentage={aiScores?.professionalismScore} label="Professionalism" value={`${aiScores?.professionalismScore || 0}%`} />
+                  <CircularProgress percentage={aiScores?.criticalThinkingScore} label="Critical Thinking" value={`${aiScores?.criticalThinkingScore || 0}%`} />
+                  <CircularProgress percentage={aiScores?.communicationScore} label="Communication" value={`${aiScores?.communicationScore || 0}%`} />
+                  <CircularProgress percentage={aiScores?.teamworkScore} label="Teamwork" value={`${aiScores?.teamworkScore || 0}%`} />
+                  <CircularProgress percentage={aiScores?.leadershipScore} label="Leadership" value={`${aiScores?.leadershipScore || 0}%`} />
                 </div>
               </div>
             </div>
           </div>
 
           <div className="mt-8 flex justify-end gap-4 mr-12">
-            <button onClick={() => console.log("Saved note:", feedbackNote)} className="rounded-xl border border-gray-400 bg-white px-6 py-2 font-bold text-black shadow-lg transition-colors hover:bg-gray-50">Save</button>
-            <button onClick={() => console.log("Send email with note:", feedbackNote)} className="rounded-xl bg-blue-600 px-6 py-2 font-bold text-white shadow-lg transition-colors hover:bg-blue-700">Send Email</button>
+            <button onClick={() => console.log("Saved note:", feedbackNote, "Ratings:", ratings)} className="rounded-xl border border-gray-400 bg-white px-6 py-2 font-bold text-black shadow-lg transition-colors hover:bg-gray-50">Save</button>
+            <button onClick={() => console.log("Send email with note:", feedbackNote, "Ratings:", ratings)} className="rounded-xl bg-blue-600 px-6 py-2 font-bold text-white shadow-lg transition-colors hover:bg-blue-700">Send Email</button>
           </div>
         </div>
       </main>

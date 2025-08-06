@@ -12,6 +12,7 @@ import AddIcon from "../components/icons/AddIcon";
 import DownloadIcon from "../components/icons/DownloadIcon";
 import * as XLSX from "xlsx";
 import { ArrowUpDown, ChevronDown, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export default function Dashboard() {
   const [stats, setStats] = useState([]);
@@ -87,18 +88,17 @@ export default function Dashboard() {
     );
     const matchesStatus = !filters.status || filters.status === "All" || (candidate.status || "Unreviewed") === filters.status;
     const matchesFeedback = !filters.feedback || filters.feedback === "All" || (candidate.feedback ?? "Need Review") === filters.feedback;
-    // const matchesDate = (!filters.startDate || (candidate.appliedDate && new Date(candidate.appliedDate) >= new Date(filters.startDate))) &&
-    //                    (!filters.endDate || (candidate.appliedDate && new Date(candidate.appliedDate) <= new Date(filters.endDate)));
+    
+    const addOneDay = (dateStr) => {
+      const date = new Date(dateStr);
+      date.setDate(date.getDate() + 1);
+      return date;
+    };
+    
     const matchesDate =
     (!filters.startDate || (candidate.appliedDate && new Date(candidate.appliedDate) >= new Date(filters.startDate))) &&
-    (!filters.endDate ||
-      (candidate.appliedDate && new Date(candidate.appliedDate) < addOneDay(filters.endDate)));
+    (!filters.endDate || (candidate.appliedDate && new Date(candidate.appliedDate) < addOneDay(filters.endDate)));
 
-  function addOneDay(dateStr) {
-    const date = new Date(dateStr);
-    date.setDate(date.getDate() + 1);
-    return date;
-  }
     return matchesSearch && matchesStatus && matchesFeedback && matchesDate;
   });
 
@@ -164,18 +164,19 @@ export default function Dashboard() {
     }
   }, []);
 
+
   const handleKeyDown = useCallback((e) => {
     if (e.key === "Escape") {
-        setShowForm(false);
-        setShowEditForm(false);
-        setShowFilterForm(false);
+      setShowForm(false);
+      setShowEditForm(false);
+      setShowFilterForm(false);
     }
   }, []);
 
   useEffect(() => {
     fetchStats();
     fetchCandidates();
-  }, [fetchCandidates, filters, searchQuery]);
+  }, [fetchCandidates]); // Hapus `filters` dan `searchQuery` dari dependencies karena logika filter sudah di frontend
 
   useEffect(() => {
     const paginatedIds = paginatedCandidates.map(c => c._id);
@@ -210,9 +211,9 @@ export default function Dashboard() {
   };
 
   const handleEditCompleted = () => {
-      setShowEditForm(false);
-      setCandidateToEdit(null);
-      fetchCandidates();
+    setShowEditForm(false);
+    setCandidateToEdit(null);
+    fetchCandidates();
   };
 
   const handleDownload = () => {
@@ -263,114 +264,112 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-white">
-        <DashboardHeader />
-    <div className="w-full max-w-[1315px] mx-auto min-h-screen bg-white mt-5" >
-
-      <br />
-      <div className="bg-white rounded-[40px] border border-[#D9D9D9] shadow p-4 sm:p-6 lg:p-8">
-        <div className="max-w-[1280px] mx-auto">
-          <h1 className="text-[32px] font-bold text-black mb-8 lg:mb-12 font-montserrat">
-            Your Stats
-          </h1>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
-            {mergedStats.map((stat, index) => (
-              <div key={index} className="text-center lg:text-left">
-                <div className="text-[20px] font-bold text-[#979797] mb-4" style={STAT_STYLE}>
-                  {stat.label}
+      <DashboardHeader />
+      <div className="w-full max-w-[1315px] mx-auto min-h-screen bg-white mt-5">
+        <br />
+        <div className="bg-white rounded-[40px] border border-[#D9D9D9] shadow p-4 sm:p-6 lg:p-8">
+          <div className="max-w-[1280px] mx-auto">
+            <h1 className="text-[32px] font-bold text-black mb-8 lg:mb-12 font-montserrat">
+              Your Stats
+            </h1>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
+              {mergedStats.map((stat, index) => (
+                <div key={index} className="text-center lg:text-left">
+                  <div className="text-[20px] font-bold text-[#979797] mb-4" style={STAT_STYLE}>
+                    {stat.label}
+                  </div>
+                  <div className={`${stat.color} text-[40px] font-bold`} style={VALUE_STYLE}>
+                    {stat.value}
+                  </div>
                 </div>
-                <div className={`${stat.color} text-[40px] font-bold`} style={VALUE_STYLE}>
-                  {stat.value}
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="mt-12 bg-white rounded-[40px] border border-[#D9D9D9] shadow-[0_4px_4px_rgba(0,0,0,0.25)] p-6 mb-10">
-        <h2 className="text-[28px] font-bold text-black mb-6 font-montserrat">Candidates</h2>
-
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-          <div className="flex items-center gap-2 w-full md:w-1/2">
-            <Search className="text-gray-400 w-5 h-5" />
-            <div className="relative flex-1">
-              <input
-                type="text"
-                placeholder="Search [Candidate][Position]"
-                className="w-full pl-4 pr-10 py-1 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300"
-                value={searchQuery}
-                onChange={handleSearchChange}
-              />
-              {searchQuery && (
-                <span
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 cursor-pointer hover:text-gray-600"
-                  onClick={() => setSearchQuery("")}
-                >
-                  ✕
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-4 justify-end items-center">
-            <button
-              onClick={handleDownload}
-              className="px-4 rounded-md mr-5 bg-[#1976D2] text-white text-sm flex items-center gap-3 hover:bg-[#1565C0] transition-colors min-w-[120px] justify-center"
-            >
-              <DownloadIcon />
-              <span>Download</span>
-            </button>
-            <button
-              className="px-4 rounded-md mr-5 bg-[#1976D2] text-white text-sm flex items-center gap-3 hover:bg-[#1565C0] transition-colors min-w-[120px] justify-center"
-              onClick={() => setShowForm(true)}
-            >
-              <AddIcon />
-              <span>Add Candidates</span>
-            </button>
-            <button
-              onClick={() => setShowFilterForm(true)}
-              className="px-4 rounded-md border text-gray-400 border-gray-300 text-sm flex items-center gap-3 hover:text-gray-600 hover:border-gray-400 transition-colors min-w-[120px] justify-center"
-            >
-              <FilterIcon />
-              <span>Filter Candidates</span>
-            </button>
-          </div>
-          {showForm && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-              <div className="relative">
-                <AddCandidateForm
-                  onClose={() => setShowForm(false)}
-                  onCandidateAdded={handleCandidateAdded}
+        <div className="mt-12 bg-white rounded-[40px] border border-[#D9D9D9] shadow-[0_4px_4px_rgba(0,0,0,0.25)] p-6 mb-10">
+          <h2 className="text-[28px] font-bold text-black mb-6 font-montserrat">Candidates</h2>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+            <div className="flex items-center gap-2 w-full md:w-1/2">
+              <Search className="text-gray-400 w-5 h-5" />
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  placeholder="Search [Candidate][Position]"
+                  className="w-full pl-4 pr-10 py-1 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300"
+                  value={searchQuery}
+                  onChange={handleSearchChange}
                 />
+                {searchQuery && (
+                  <span
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 cursor-pointer hover:text-gray-600"
+                    onClick={() => setSearchQuery("")}
+                  >
+                    ✕
+                  </span>
+                )}
               </div>
             </div>
-          )}
-          {showFilterForm && (
-            <div className="fixed inset-0 z-50 flex items-start justify-end bg-black bg-opacity-50">
-              <div className="relative mt-[120px] mr-[100px]">
-                <div className="max-h-[80vh] overflow-y-auto bg-white rounded-lg shadow-xl">
-                  <FilterCandidate
-                    onClose={() => setShowFilterForm(false)}
-                    onApplyFilter={handleFilterApply}
-                    initialFilters={filters}
+
+            <div className="flex flex-wrap gap-4 justify-end items-center">
+              <button
+                onClick={handleDownload}
+                className="px-4 rounded-md mr-5 bg-[#1976D2] text-white text-sm flex items-center gap-3 hover:bg-[#1565C0] transition-colors min-w-[120px] justify-center"
+              >
+                <DownloadIcon />
+                <span>Download</span>
+              </button>
+              <button
+                className="px-4 rounded-md mr-5 bg-[#1976D2] text-white text-sm flex items-center gap-3 hover:bg-[#1565C0] transition-colors min-w-[120px] justify-center"
+                onClick={() => setShowForm(true)}
+              >
+                <AddIcon />
+                <span>Add Candidates</span>
+              </button>
+              <button
+                onClick={() => setShowFilterForm(true)}
+                className="px-4 rounded-md border text-gray-400 border-gray-300 text-sm flex items-center gap-3 hover:text-gray-600 hover:border-gray-400 transition-colors min-w-[120px] justify-center"
+              >
+                <FilterIcon />
+                <span>Filter Candidates</span>
+              </button>
+            </div>
+            {showForm && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+                <div className="relative">
+                  <AddCandidateForm
+                    onClose={() => setShowForm(false)}
+                    onCandidateAdded={handleCandidateAdded}
                   />
                 </div>
               </div>
-            </div>
-          )}
-          {showEditForm && candidateToEdit && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-              <div className="relative">
-                <EditCandidateForm
-                  candidateData={candidateToEdit}
-                  onClose={() => setShowEditForm(false)}
-                  onEditCompleted={handleEditCompleted}
-                />
+            )}
+            {showFilterForm && (
+              <div className="fixed inset-0 z-50 flex items-start justify-end bg-black bg-opacity-50">
+                <div className="relative mt-[120px] mr-[100px]">
+                  <div className="max-h-[80vh] overflow-y-auto bg-white rounded-lg shadow-xl">
+                    <FilterCandidate
+                      onClose={() => setShowFilterForm(false)}
+                      onApplyFilter={handleFilterApply}
+                      initialFilters={filters}
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-          <div className="overflow-auto ">
+            )}
+            {showEditForm && candidateToEdit && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+                <div className="relative">
+                  <EditCandidateForm
+                    candidateData={candidateToEdit}
+                    onClose={() => setShowEditForm(false)}
+                    onEditCompleted={handleEditCompleted}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="overflow-auto">
             <table className="min-w-full text-sm border-collapse">
               <thead className="text-black border-b border-gray-300">
                 <tr>
@@ -450,6 +449,7 @@ export default function Dashboard() {
                   </tr>
                 ) : (
                   paginatedCandidates.map((c, i) => {
+                    console.log("Candidate data:", c._id); // Debugging log
                     const status = c.status || "Unreviewed";
                     const score = c.score ?? Math.floor(Math.random() * 40) + 60;
                     const rating = c.rating ?? "0.0";
@@ -478,7 +478,25 @@ export default function Dashboard() {
                             className="w-8 h-8 rounded-full"
                           />
                           <div>
-                            <div className="font-semibold text-black">{c.name}</div>
+                        
+                            <Link 
+                                to={`/video-interview/${c._id}`} 
+                                className="font-semibold text-black hover:underline"
+                              >
+                                {c.name}
+                              </Link>
+                            {/* {c.interviews?.[0]?._id ? ( // Gunakan `_id` untuk MongoDB
+                              <Link 
+                                to={`/video-interview/${c.interviews[0]._id}`} 
+                                className="font-semibold text-black hover:underline"
+                              >
+                                {c.name}
+                              </Link>
+                            ) : (
+                              <span className="font-semibold text-black">
+                                {c.name}
+                              </span>
+                            )} */}
                             <div className="text-xs text-gray-500">{c.email}</div>
                           </div>
                         </td>
@@ -492,7 +510,7 @@ export default function Dashboard() {
                         <td
                           className={`py-3 px-2 font-semibold ${feedbackColor}`}
                           onClick={() => {
-                            if (feedback !== "Sent") setSelectedCandidate(c);
+                            if (feedback !== "Sent") console.log("Set candidate for feedback email: ", c); // Anda mungkin ingin mengimplementasikan ini
                           }}
                         >
                           {feedback}
@@ -544,51 +562,48 @@ export default function Dashboard() {
               </tbody>
             </table>
           </div>
-        <div className="flex justify-center items-center mt-6 text-sm text-gray-500 space-x-2">
-          <button
-            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-            disabled={currentPage === 1}
-            className={`px-3 py-1 hover:underline disabled:opacity-50 ${
-              currentPage > 1 ? "font-bold" : "font-normal"
-            }`}
-          >
-            ← Previous
-          </button>
-
-          <div className="flex gap-1 items-center">
-            {Array.from({ length: Math.ceil(filteredCandidates.length / pageSize) }, (_, i) => i + 1)
-              .slice(0, 5)
-              .map((num) => (
-                <button
-                  key={num}
-                  onClick={() => setCurrentPage(num)}
-                  className={`px-3 py-1 rounded-md ${
-                    num === currentPage ? "bg-black text-white" : "hover:bg-gray-200 text-gray-700"
-                  }`}
-                >
-                  {num}
-                </button>
-              ))}
+          <div className="flex justify-center items-center mt-6 text-sm text-gray-500 space-x-2">
+            <button
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className={`px-3 py-1 hover:underline disabled:opacity-50 ${
+                currentPage > 1 ? "font-bold" : "font-normal"
+              }`}
+            >
+              ← Previous
+            </button>
+            <div className="flex gap-1 items-center">
+              {Array.from({ length: Math.ceil(filteredCandidates.length / pageSize) }, (_, i) => i + 1)
+                .slice(0, 5)
+                .map((num) => (
+                  <button
+                    key={num}
+                    onClick={() => setCurrentPage(num)}
+                    className={`px-3 py-1 rounded-md ${
+                      num === currentPage ? "bg-black text-white" : "hover:bg-gray-200 text-gray-700"
+                    }`}
+                  >
+                    {num}
+                  </button>
+                ))}
+            </div>
+            <button
+              onClick={() =>
+                setCurrentPage((prev) =>
+                  Math.min(prev + 1, Math.ceil(filteredCandidates.length / pageSize))
+                )
+              }
+              disabled={currentPage * pageSize >= filteredCandidates.length}
+              className={`px-3 py-1 hover:underline disabled:opacity-50 ${
+                currentPage * pageSize < filteredCandidates.length ? "font-bold" : "font-normal"
+              }`}
+            >
+              Next →
+            </button>
           </div>
-
-          <button
-            onClick={() =>
-              setCurrentPage((prev) =>
-                Math.min(prev + 1, Math.ceil(filteredCandidates.length / pageSize))
-              )
-            }
-            disabled={currentPage * pageSize >= filteredCandidates.length}
-            className={`px-3 py-1 hover:underline disabled:opacity-50 ${
-              currentPage * pageSize < filteredCandidates.length ? "font-bold" : "font-normal"
-            }`}
-          >
-            Next →
-          </button>
         </div>
+        <PartnerFooter />
       </div>
-
-      <PartnerFooter />
-    </div>
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { Router } from "express";
 import { isAuthenticated, isHR } from "../validators/auth.validator.js";
 import Candidate from "../models/Candidate.js";
 import Interview from "../models/Interview.js";
-import mongoose from "mongoose"; // Tetap pertahankan mongoose jika digunakan di tempat lain
+import mongoose from "mongoose"; 
 import multer from 'multer';
 import { uploadFileLocally } from '../utils/fileUploadService.js';
 
@@ -30,7 +30,6 @@ router.put(
       const { name, email, position, interviewType, phoneNumber } = req.body;
       const recordingFile = req.file;
 
-      // Temukan kandidat yang akan diperbarui dan pastikan milik user saat ini
       const candidate = await Candidate.findOne({ _id: id, createdBy: userId });
 
       if (!candidate) {
@@ -59,9 +58,6 @@ router.put(
         const latestInterview = await Interview.findOne({ candidateId: id, userId: userId }).sort({ createdAt: -1 });
 
         if (latestInterview) {
-          // TODO: Hapus file lama dari server
-          // const oldFileName = path.basename(latestInterview.recordingUrl);
-          // fs.unlinkSync(path.join(__dirname, '../../public/uploads', oldFileName));
           
           latestInterview.interviewType = interviewType || latestInterview.interviewType;
           latestInterview.recordingUrl = recordingUrl;
@@ -70,7 +66,6 @@ router.put(
           
           await latestInterview.save();
         } else {
-          // Buat interview baru jika belum ada
           const newInterview = await Interview.create({
             userId,
             candidateId: candidate._id,
@@ -113,7 +108,7 @@ router.get('/stats', isAuthenticated, isHR, async (req, res, next) => {
 
         const totalResponses = await Interview.countDocuments({
             userId: userId,
-            processStatus: 'HR Reviewed', // Atau 'Analysis Complete' DAN hrFeedbackProvided: true
+            processStatus: 'HR Reviewed', 
             hrFeedbackProvided: true
         });
 
@@ -268,7 +263,6 @@ router.post(
                 return res.status(400).json({ message: "Candidate with this email already exists." });
             }
 
-            // 1. Simpan file secara lokal
             const uniqueFileName = `${Date.now()}-${recordingFile.originalname.replace(/\s/g, '_')}`;
             let recordingUrl;
             try {
@@ -278,7 +272,6 @@ router.post(
                 return res.status(500).json({ message: "Failed to upload interview recording.", error: uploadError.message });
             }
 
-            // 2. Buat Kandidat Baru
             let newCandidate = await Candidate.create({
                 name,
                 email,
@@ -287,12 +280,9 @@ router.post(
                 applicationStatus: 'Interviewed'
             });
 
-            // Simulasi AI Score dan Feedback untuk respons langsung (Ini hanya dummy!)
-            // Di lingkungan nyata, ini akan diisi oleh proses background setelah analisis
-            const dummyAiScore = Math.floor(Math.random() * (95 - 60 + 1)) + 60; // Skor acak antara 60-95
+            const dummyAiScore = Math.floor(Math.random() * (95 - 60 + 1)) + 60; 
             const dummyAiFeedback = "Initial AI analysis pending, but candidate profile looks promising.";
 
-            // 3. Buat Entri Interview Baru
             const newInterview = await Interview.create({
                 userId,
                 candidateId: newCandidate._id,
@@ -300,11 +290,10 @@ router.post(
                 recordingUrl,
                 recordingType: recordingFile.mimetype.startsWith('video') ? 'video' : 'audio',
                 processStatus: 'Uploaded',
-                overallAiScore: dummyAiScore,      // <--- TAMBAHKAN INI (DUMMY)
-                overallAiFeedback: dummyAiFeedback // <--- TAMBAHKAN INI (DUMMY)
+                overallAiScore: dummyAiScore,      
+                overallAiFeedback: dummyAiFeedback 
             });
 
-            // 4. Update Kandidat dengan ID Interview dan ambil dokumen terbaru
             newCandidate = await Candidate.findByIdAndUpdate(
                 newCandidate._id,
                 { $push: { interviews: newInterview._id } },

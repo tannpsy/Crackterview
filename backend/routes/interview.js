@@ -1,4 +1,4 @@
-// Backend/routes/interview.js (Revisi Minor)
+
 import { Router } from "express";
 import Interview from "../models/Interview.js";
 import Candidate from "../models/Candidate.js";
@@ -6,7 +6,6 @@ import { isAuthenticated, isHR } from "../validators/auth.validator.js";
 
 const router = Router();
 
-// Endpoint untuk upload wawancara, tidak berubah secara signifikan
 router.post('/upload/:candidateId', isAuthenticated, isHR, async (req, res, next) => {
     const { candidateId } = req.params;
     const { interviewType, recordingType, recordingUrl } = req.body;
@@ -48,25 +47,26 @@ router.post('/upload/:candidateId', isAuthenticated, isHR, async (req, res, next
     }
 });
 
-// Endpoint untuk mendapatkan detail interview, tidak berubah secara signifikan
 router.get('/:interviewId', isAuthenticated, isHR, async (req, res, next) => {
-    const { interviewId } = req.params;
+    // Treat the parameter as candidateId
+    const { interviewId } = req.params; 
     const userId = req.user._id;
 
     try {
-        const interview = await Interview.findOne({ _id: interviewId, userId }).populate('candidateId');
+        const interview = await Interview.findOne({ candidateId: interviewId, userId }).populate('candidateId');
+
         if (!interview) {
-            return res.status(404).json({ message: "Interview not found or you don't have access." });
+            return res.status(404).json({ message: "Interview not found for this candidate or you don't have access." });
         }
+
         res.json(interview);
+        
     } catch (error) {
-        console.error("Error fetching interview details:", error);
+        console.error("Error fetching interview details by candidate ID:", error);
         next(error);
     }
 });
 
-
-// Endpoint untuk HR me-review wawancara
 router.put('/:interviewId/review', isAuthenticated, isHR, async (req, res, next) => {
     const { interviewId } = req.params;
     const { hrRating, hrNotes, hrFeedbackProvided } = req.body || {};;
@@ -83,8 +83,8 @@ router.put('/:interviewId/review', isAuthenticated, isHR, async (req, res, next)
                 $set: {
                     hrRating: hrRating,
                     hrNotes: hrNotes,
-                    hrFeedbackProvided: true, // <--- PASTIKAN INI TRUE SAAT DI-REVIEW
-                    processStatus: 'HR Reviewed' // <--- Set status final
+                    hrFeedbackProvided: true, 
+                    processStatus: 'HR Reviewed' 
                 }
             },
             { new: true }

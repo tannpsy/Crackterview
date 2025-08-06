@@ -14,7 +14,6 @@ import LandingPage from "./frontend/LandingPage.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import GoogleSuccess from "./pages/GoogleSuccess.jsx";
 import AddCandidateForm from "./frontend/AddCandidate.jsx";
-import InterviewPage from "./pages/VideoInterview.jsx";
 import VideoInterview from "./pages/VideoInterview.jsx";
 import { Toaster } from "react-hot-toast";
 
@@ -39,7 +38,6 @@ const App = () => (
           </ProtectedRoute>
         }
       />
-      <Route path="/video-interview" element={<InterviewPage /> } />
       <Route path="/add-candidate" element={<AddCandidateForm /> } />
       <Route path="/video-interview/:interviewId" element={<VideoInterview /> } />
       <Route path="*" element={<NotFound />} />
