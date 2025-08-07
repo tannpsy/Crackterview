@@ -1,0 +1,15 @@
+// const express = require('express');
+// const { togglePinQuestion, updateQuestionNote, addQuestionsToSession} = require('../controllers/questionController');
+// const { protect} = require('../middlewares/authMiddleware');
+import express from "express";
+import { togglePinQuestion, updateQuestionNote, addQuestionsToSession } from "../controllers/questionController.js";
+import { protect } from "../middlewares/authMiddleware.js";
+
+const router = express.Router();
+
+router.post('/add', protect, addQuestionsToSession);
+router.post('/:id/pin', protect, togglePinQuestion);
+router.post('/:id/note', protect, updateQuestionNote);
+
+// module.exports = router;
+export default router;
