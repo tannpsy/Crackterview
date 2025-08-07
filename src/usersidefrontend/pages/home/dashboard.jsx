@@ -1,10 +1,9 @@
-import React, { useContext } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { LuPlus } from "react-icons/lu";
 import { CARD_BG } from "../../utils/data";
 import toast from "react-hot-toast";
 import DashboardLayout from '../../components/layouts/DashboardLayout';
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
 import axiosInstance from '../../utils/axiosInstance';
 import { API_PATHS } from '../../utils/apiPaths';
 import SummaryCard from '../../components/cards/SummaryCard';
@@ -16,6 +15,7 @@ import PartnerFooter from '../../components/PartnerFooter';
 import ChatBubble from '../../components/ChatbotBubble';
 import ChatbotForm from '../../components/ChatbotForm';
 import { UserContext } from '../../context/userContext.jsx';
+import { IoSearchOutline, IoClose } from 'react-icons/io5';
 
 const Dashboard = () => {
     const navigate = useNavigate();
@@ -24,6 +24,8 @@ const Dashboard = () => {
     const [openCreateModal, setOpenCreateModal] = useState(false);
     const [sessions, setSessions] = useState([]);
     const [isChatbotOpen, setIsChatbotOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [filteredSessions, setFilteredSessions] = useState([]);
 
     const [openDeleteAlert, setOpenDeleteAlert] = useState({
         open: false,
@@ -34,8 +36,9 @@ const Dashboard = () => {
         try {
             const response = await axiosInstance.get(API_PATHS.SESSION.GET_ALL);
             setSessions(response.data);
+            setFilteredSessions(response.data);
         } catch (error) {
-            console.error("Error fetching session data:", error)
+            console.error("Error fetching session data:", error);
         }
     };
     
@@ -54,7 +57,7 @@ const Dashboard = () => {
         }
     };
 
-    const renderedCards = sessions?.map((data, index) => {
+    const renderedCards = filteredSessions?.map((data, index) => {
         const colors = CARD_BG[index % CARD_BG.length];
         const bgcolors = CARD_BG[index % CARD_BG.length].bgcolor;
 
@@ -83,46 +86,66 @@ const Dashboard = () => {
     const toggleChatbot = () => {
         setIsChatbotOpen(!isChatbotOpen);
     };
+    
+    const handleClearSearch = () => {
+        setSearchQuery("");
+    };
 
-    // useEffect(() => {
-    //     fetchAllSessions();
-    // }, []);
-    // useEffect(() => {
-    //     const token = localStorage.getItem("token");
-    //     if (token) {
-    //         fetchAllSessions();
-    //     } else {
-    //         navigate("/");
-    //     }
-    // }, []);
-     useEffect(() => {
-        // Wait for loading to finish before deciding
+    useEffect(() => {
         if (loading) return;
 
         if (!user) {
-            navigate("/"); // Not logged in, redirect to login
+            navigate("/");
         } else {
-            fetchAllSessions(); // ✅ Only call this when user is loaded
+            fetchAllSessions();
         }
-    }, [user, loading]); // 👈 Depend on both
-
+    }, [user, loading, navigate]);
+    
+    useEffect(() => {
+        const lowercasedQuery = searchQuery.toLowerCase();
+        const results = sessions.filter(session => 
+            (session.role && session.role.toLowerCase().includes(lowercasedQuery)) ||
+            (session.topicsToFocus && session.topicsToFocus.toLowerCase().includes(lowercasedQuery))
+        );
+        setFilteredSessions(results);
+    }, [searchQuery, sessions]);
 
     return (
         <>
         <DashboardLayout>
             <div className="container mx-auto pt-4 pb-4">
-                <div className="flex items-center justify-between px-4 md:px-0 pb-6">
+                <div className="flex flex-col md:flex-row items-center justify-between px-4 md:px-0 pb-6 gap-4 md:gap-0">
                     <h2 className="text-xl md:text-2xl font-semibold text-gray-800">
                         Interview Hack with AI
                     </h2>
 
-                    <button
-                        className="h-10 md:h-12 flex items-center justify-center gap-2 bg-gradient-to-r from-[#FF9324] to-[#e99a4b] text-sm font-semibold text-white px-5 py-2 rounded-2xl hover:bg-black hover:text-white transition-colors cursor-pointer hover:shadow-2xl hover:shadow-orange-300"
-                        onClick={() => setOpenCreateModal(true)}
-                    >
-                        <LuPlus className="text-xl md:text-2xl text-white" />
-                        Add New
-                    </button>
+                    <div className="flex items-center gap-4 w-full md:w-auto">
+                         {/* Search bar starts here */}
+                        <div className="w-[583px] h-[52px] bg-white rounded-full shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] outline outline-1 outline-offset-[-0.50px] outline-gray-300 inline-flex items-center gap-2 overflow-hidden px-4 py-3">
+                            <IoSearchOutline className="text-gray-500 w-5 h-5" />
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="Search"
+                                className="flex-1 bg-transparent border-none outline-none text-gray-700 text-base font-normal font-['Inter'] leading-none placeholder-gray-400"
+                            />
+                            {searchQuery && (
+                                <IoClose
+                                    className="text-gray-500 w-5 h-5 cursor-pointer"
+                                    onClick={handleClearSearch}
+                                />
+                            )}
+                        </div>
+                         {/* Search bar ends here */}
+                        <button
+                            className="h-10 md:h-12 flex-shrink-0 flex items-center justify-center gap-2 bg-gradient-to-r from-[#FF9324] to-[#e99a4b] text-sm font-semibold text-white px-5 py-2 rounded-2xl hover:bg-black hover:text-white transition-colors cursor-pointer hover:shadow-2xl hover:shadow-orange-300"
+                            onClick={() => setOpenCreateModal(true)}
+                        >
+                            <LuPlus className="text-xl md:text-2xl text-white" />
+                            Add New
+                        </button>
+                    </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-7 pt-1 pb-6 px-4 md:px-0">
                     {renderedCards}
