@@ -3,13 +3,16 @@ import axios from "axios";
 import { toast } from "react-hot-toast";
 import DashboardHeader from "../components/HeaderDashboard";
 import AddCandidateForm from "../frontend/AddCandidate";
+import FilterCandidate from "../frontend/FilterCandidate";
+import EditCandidateForm from "../frontend/EditCandidate";
 import PartnerFooter from "../components/PartnerFooter";
 import { Search } from "lucide-react";
 import FilterIcon from "../components/icons/FilterIcon";
 import AddIcon from "../components/icons/AddIcon";
 import DownloadIcon from "../components/icons/DownloadIcon";
-import * as XLSX from 'xlsx';
-// import FeedbackModal from "../components/FeedbackModal"; feedback moved to user interview page
+import * as XLSX from "xlsx";
+import { ArrowUpDown, ChevronDown, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export default function Dashboard() {
   const [stats, setStats] = useState([]);
@@ -17,12 +20,89 @@ export default function Dashboard() {
   const [loadingCandidates, setLoadingCandidates] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  // const [selectedCandidate, setSelectedCandidate] = useState(null);
-  const [candidateCount, setCandidateCount] = useState(0); 
+  const [candidateCount, setCandidateCount] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showFilterForm, setShowFilterForm] = useState(false);
+  const [filters, setFilters] = useState({ status: null, feedback: null, startDate: null, endDate: null });
+  const [activeMenu, setActiveMenu] = useState(null);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [candidateToEdit, setCandidateToEdit] = useState(null);
+  const [selectedCandidates, setSelectedCandidates] = useState([]);
+  const [isAllSelected, setIsAllSelected] = useState(false);
 
-  const pageSize = 10;
+  const pageSize = 5;
 
-  const paginatedCandidates = candidates.slice(
+  const handleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedCandidates([]);
+    } else {
+      setSelectedCandidates(paginatedCandidates.map((c) => c._id));
+    }
+    setIsAllSelected(!isAllSelected);
+  };
+
+  const handleSelectCandidate = (candidateId) => {
+    setSelectedCandidates((prevSelected) => {
+      if (prevSelected.includes(candidateId)) {
+        return prevSelected.filter((id) => id !== candidateId);
+      } else {
+        return [...prevSelected, candidateId];
+      }
+    });
+  };
+
+  const handleEditCandidate = (candidate) => {
+    setCandidateToEdit(candidate);
+    setShowEditForm(true);
+    setActiveMenu(null);
+  };
+
+  const handleDeleteCandidate = async (candidate) => {
+    if (window.confirm(`Are you sure you want to delete candidate ${candidate.name}?`)) {
+      try {
+        await axios.delete(`/api/dashboard/candidates/${candidate._id}`, { withCredentials: true });
+        toast.success(`${candidate.name} has been deleted successfully!`);
+
+        setCandidates(candidates.filter(c => c._id !== candidate._id));
+        setCandidateCount(prevCount => prevCount - 1);
+
+        setActiveMenu(null);
+
+        fetchStats();
+
+        if (paginatedCandidates.length === 1 && currentPage > 1) {
+          setCurrentPage(currentPage - 1);
+        }
+      } catch (error) {
+        console.error("Failed to delete candidate:", error);
+        toast.error("Failed to delete candidate. Please try again.");
+      }
+    }
+  };
+
+  const filteredCandidates = candidates.filter((candidate) => {
+    const query = searchQuery.toLowerCase();
+    const matchesSearch = (
+      (candidate.name && candidate.name.toLowerCase().includes(query)) ||
+      (candidate.position && candidate.position.toLowerCase().includes(query))
+    );
+    const matchesStatus = !filters.status || filters.status === "All" || (candidate.status || "Unreviewed") === filters.status;
+    const matchesFeedback = !filters.feedback || filters.feedback === "All" || (candidate.feedback ?? "Need Review") === filters.feedback;
+    
+    const addOneDay = (dateStr) => {
+      const date = new Date(dateStr);
+      date.setDate(date.getDate() + 1);
+      return date;
+    };
+    
+    const matchesDate =
+    (!filters.startDate || (candidate.appliedDate && new Date(candidate.appliedDate) >= new Date(filters.startDate))) &&
+    (!filters.endDate || (candidate.appliedDate && new Date(candidate.appliedDate) < addOneDay(filters.endDate)));
+
+    return matchesSearch && matchesStatus && matchesFeedback && matchesDate;
+  });
+
+  const paginatedCandidates = filteredCandidates.slice(
     (currentPage - 1) * pageSize,
     currentPage * pageSize
   );
@@ -70,7 +150,7 @@ export default function Dashboard() {
       const data = res.data?.data;
       if (Array.isArray(data)) {
         setCandidates(data);
-        setCandidateCount(data.length); 
+        setCandidateCount(data.length);
       } else {
         setCandidates([]);
         setCandidateCount(0);
@@ -84,61 +164,45 @@ export default function Dashboard() {
     }
   }, []);
 
-  // const handleFeedbackSubmit = async ({ candidateId, hrRating, hrNotes, interviewId }) => {
-  //   const candidate = candidates.find(c => c._id === candidateId);
-  //   const finalInterviewId = candidate?.interviewId || interviewId;
-
-  //   if (!finalInterviewId) {
-  //     toast.error("No interview exists for this candidate.");
-  //     return;
-  //   }
-
-
-  //   try {
-  //     await axios.put(
-  //       `http://localhost:5000/api/dashboard/candidates/${candidateId}/interviews/${finalInterviewId}/review-status`,
-  //       {
-  //         hrRating: rating,
-  //         hrNotes: notes,
-  //         hrFeedbackProvided: true,
-  //       },
-  //       { withCredentials: true }
-  //     );
-
-  //     setCandidates(prev =>
-  //       prev.map(c =>
-  //         c._id === candidateId
-  //           ? { ...c, feedback: "Sent", rating, interviewId: finalInterviewId }
-  //           : c
-  //       )
-  //     );
-
-  //     toast.success("Feedback submitted!");
-  //     setSelectedCandidate(null);
-  //   } catch (error) {
-  //     console.error("Error submitting feedback:", error);
-  //     toast.error("Failed to submit feedback.");
-  //   }
-  // };
-
 
   const handleKeyDown = useCallback((e) => {
-    if (e.key === "Escape") setShowForm(false);
+    if (e.key === "Escape") {
+      setShowForm(false);
+      setShowEditForm(false);
+      setShowFilterForm(false);
+    }
   }, []);
 
   useEffect(() => {
     fetchStats();
     fetchCandidates();
-  }, [fetchCandidates]);
+  }, [fetchCandidates]); // Hapus `filters` dan `searchQuery` dari dependencies karena logika filter sudah di frontend
 
   useEffect(() => {
-    if (showForm) {
+    const paginatedIds = paginatedCandidates.map(c => c._id);
+    const allOnPageSelected = paginatedIds.length > 0 && paginatedIds.every(id => selectedCandidates.includes(id));
+    setIsAllSelected(allOnPageSelected);
+  }, [selectedCandidates, paginatedCandidates]);
+
+  useEffect(() => {
+    if (showForm || showEditForm || showFilterForm) {
       document.addEventListener("keydown", handleKeyDown);
     } else {
       document.removeEventListener("keydown", handleKeyDown);
     }
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [showForm, handleKeyDown]);
+  }, [showForm, showEditForm, showFilterForm, handleKeyDown]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (activeMenu && !event.target.closest(`.menu-container-${activeMenu}`)) {
+        setActiveMenu(null);
+      }
+    };
+
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, [activeMenu]);
 
   const handleCandidateAdded = () => {
     fetchCandidates();
@@ -146,261 +210,400 @@ export default function Dashboard() {
     setCurrentPage(1);
   };
 
+  const handleEditCompleted = () => {
+    setShowEditForm(false);
+    setCandidateToEdit(null);
+    fetchCandidates();
+  };
+
   const handleDownload = () => {
     try {
-      console.log('Starting download with candidates:', candidates.length);
-      // Prepare the data for Excel
-      const excelData = candidates.map(candidate => ({
-        Name: candidate.name || '',
-        Email: candidate.email || '',
-        Position: candidate.position || '',
-        'Applied Date': candidate.appliedDate ? new Date(candidate.appliedDate).toLocaleDateString() : '-',
-        Status: candidate.status || 'Unreviewed',
-        'AI Score': candidate.score ?? '-',
-        'HR Rating': candidate.rating ?? '0.0',
-        'Feedback Status': candidate.feedback ?? 'Need Review'
+      const excelData = candidates.map((candidate) => ({
+        Name: candidate.name || "",
+        Email: candidate.email || "",
+        Position: candidate.position || "",
+        "Applied Date": candidate.appliedDate ? new Date(candidate.appliedDate).toLocaleDateString() : "-",
+        Status: candidate.status || "Unreviewed",
+        "AI Score": candidate.score ?? "-",
+        "HR Rating": candidate.rating ?? "0.0",
+        "Feedback Status": candidate.feedback ?? "Need Review",
       }));
 
-      // Create a new workbook and worksheet
       const workbook = XLSX.utils.book_new();
       const worksheet = XLSX.utils.json_to_sheet(excelData);
-
-      // Add the worksheet to the workbook
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Candidates');
-
-      // Generate the Excel file
-      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-      const data = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      
-      // Create download link
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Candidates");
+      const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+      const data = new Blob([excelBuffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
       const url = window.URL.createObjectURL(data);
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
-      link.download = `candidates_${new Date().toISOString().split('T')[0]}.xlsx`;
-      
-      // Trigger download
+      link.download = `candidates_${new Date().toISOString().split("T")[0]}.xlsx`;
       document.body.appendChild(link);
       link.click();
-      
-      // Cleanup
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-
-      toast.success('Candidates data downloaded successfully!');
+      toast.success("Candidates data downloaded successfully!");
     } catch (error) {
-      console.error('Error downloading file:', error);
-      toast.error('Failed to download candidates data: ' + error.message);
-      console.error('Detailed error:', error);
+      console.error("Error downloading file:", error);
+      toast.error("Failed to download candidates data: " + error.message);
     }
   };
 
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+    setCurrentPage(1);
+  };
+
+  const handleFilterApply = (newFilters) => {
+    setFilters(newFilters);
+    setCurrentPage(1);
+    setShowFilterForm(false);
+  };
+
   return (
-    <div className="w-full max-w-[1315px] mx-auto">
+    <div className="min-h-screen bg-white">
       <DashboardHeader />
-      <br />
-      <div className="bg-white rounded-[40px] border border-[#D9D9D9] shadow p-4 sm:p-6 lg:p-8">
-        <div className="max-w-[1280px] mx-auto">
-          <h1 className="text-[32px] font-bold text-black mb-8 lg:mb-12 font-montserrat">
-            Your Stats
-          </h1>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
-            {mergedStats.map((stat, index) => (
-              <div key={index} className="text-center lg:text-left">
-                <div className="text-[20px] font-bold text-[#979797] mb-4" style={STAT_STYLE}>
-                  {stat.label}
+      <div className="w-full max-w-[1315px] mx-auto min-h-screen bg-white mt-5">
+        <br />
+        <div className="bg-white rounded-[40px] border border-[#D9D9D9] shadow p-4 sm:p-6 lg:p-8">
+          <div className="max-w-[1280px] mx-auto">
+            <h1 className="text-[32px] font-bold text-black mb-8 lg:mb-12 font-montserrat">
+              Your Stats
+            </h1>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
+              {mergedStats.map((stat, index) => (
+                <div key={index} className="text-center lg:text-left">
+                  <div className="text-[20px] font-bold text-[#979797] mb-4" style={STAT_STYLE}>
+                    {stat.label}
+                  </div>
+                  <div className={`${stat.color} text-[40px] font-bold`} style={VALUE_STYLE}>
+                    {stat.value}
+                  </div>
                 </div>
-                <div className={`${stat.color} text-[40px] font-bold`} style={VALUE_STYLE}>
-                  {stat.value}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-12 bg-white rounded-[40px] border border-[#D9D9D9] shadow-[0_4px_4px_rgba(0,0,0,0.25)] p-6">
-        <h2 className="text-[28px] font-bold text-black mb-6 font-montserrat">Candidates</h2>
-   
-        {/* <p className="text-gray-600 mb-4">Total Candidates: {candidateCount}</p> */}
-        
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-          <div className="flex items-center gap-2 w-full md:w-1/2">
-            <Search className="text-gray-400 w-5 h-5" />
-            <div className="relative flex-1">
-              <input
-                type="text"
-                placeholder="Search Candidates"
-                className="w-full pl-4 pr-10 py-2 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300"
-              />
-              <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 cursor-pointer hover:text-gray-600">✕</span>
+              ))}
             </div>
           </div>
+        </div>
 
-          <div className="flex flex-wrap gap-4 justify-end items-center">
-            <button 
-              onClick={handleDownload}
-              className="px-6 py-2.5 rounded-full border text-[#1976D2] border-[#1976D2] text-sm flex items-center gap-3 hover:bg-[#1565C0] hover:text-white hover:border-[#1565C0] transition-colors min-w-[140px] justify-center"
-            >
-              <DownloadIcon />
-              <span>Download</span>
-            </button>
-            <button 
-              className="px-6 py-2.5 rounded-full bg-[#1976D2] text-white text-sm flex items-center gap-3 hover:bg-[#1565C0] transition-colors min-w-[160px] justify-center" 
-              onClick={() => setShowForm(true)}
-            >
-              <AddIcon />
-              <span>Add Candidates</span>
-            </button>
-            <button className="px-6 py-2.5 rounded-full border text-gray-400 border-gray-300 text-sm flex items-center gap-3 hover:text-gray-600 hover:border-gray-400 transition-colors min-w-[160px] justify-center">
-              <FilterIcon />
-              <span>Filter Candidates</span>
-            </button>
-          </div>
-          {showForm && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-              <div className="relative">
-                <AddCandidateForm
-                  onClose={() => setShowForm(false)}
-                  onCandidateAdded={handleCandidateAdded}
+        <div className="mt-12 bg-white rounded-[40px] border border-[#D9D9D9] shadow-[0_4px_4px_rgba(0,0,0,0.25)] p-6 mb-10">
+          <h2 className="text-[28px] font-bold text-black mb-6 font-montserrat">Candidates</h2>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+            <div className="flex items-center gap-2 w-full md:w-1/2">
+              <Search className="text-gray-400 w-5 h-5" />
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  placeholder="Search [Candidate][Position]"
+                  className="w-full pl-4 pr-10 py-1 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300"
+                  value={searchQuery}
+                  onChange={handleSearchChange}
                 />
+                {searchQuery && (
+                  <span
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 cursor-pointer hover:text-gray-600"
+                    onClick={() => setSearchQuery("")}
+                  >
+                    ✕
+                  </span>
+                )}
               </div>
             </div>
-          )}
-        </div>
-      </div>
 
-      <div className="overflow-auto">
-        <table className="min-w-full text-sm border-collapse">
-          <thead className="text-gray-500 border-b border-gray-300">
-            <tr>
-              <th className="text-left py-3 px-2">
-                <input type="checkbox" />
-              </th>
-              <th className="text-left py-3 px-2">Name</th>
-              <th className="text-left py-3 px-2">Position</th>
-              <th className="text-left py-3 px-2">Applied Date</th>
-              <th className="text-left py-3 px-2">Status</th>
-              <th className="text-left py-3 px-2">AI Score</th>
-              <th className="text-left py-3 px-2">HR Rating</th>
-              <th className="text-left py-3 px-2">Send Email</th>
-            </tr>
-          </thead>
-          <tbody className="text-gray-700">
-            {loadingCandidates ? (
-              <tr>
-                <td colSpan="8" className="text-center py-6 text-gray-500">
-                  Loading candidates...
-                </td>
-              </tr>
-            ) : paginatedCandidates.length === 0 ? (
-              <tr>
-                <td colSpan="8" className="text-center py-6 text-gray-500">
-                  No candidates found
-                </td>
-              </tr>
-            ) : (
-              paginatedCandidates.map((c, i) => {
-                const status = c.status || "Unreviewed";
-                const score = c.score ?? Math.floor(Math.random() * 40) + 60;
-                const rating = c.rating ?? "0.0";
-                const feedback = c.feedback ?? "Need Review";
-                const statusColor = status === "Reviewed" ? "text-green-600" : "text-red-500";
-                const feedbackColor =
-                  feedback === "Sent"
-                    ? "text-green-600"
-                    : feedback === "Need Review"
-                    ? "text-red-500"
-                    : "text-blue-600 underline cursor-pointer";
-
-                return (
-                  <tr key={c._id || i} className="border-b border-gray-200 hover:bg-gray-50">
-                    <td className="py-3 px-2">
-                      <input type="checkbox" />
-                    </td>
-                    <td className="py-3 px-2 flex items-center gap-3">
-                      <img
-                        src={`https://i.pravatar.cc/32?u=${c.name || c.email}`}
-                        alt="avatar"
-                        className="w-8 h-8 rounded-full"
-                      />
-                      <div>
-                        <div className="font-semibold text-black">{c.name}</div>
-                        <div className="text-xs text-gray-500">{c.email}</div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-2">{c.position}</td>
-                    <td className="py-3 px-2">
-                      {c.appliedDate ? new Date(c.appliedDate).toLocaleDateString() : "-"}
-                    </td>
-                    <td className={`py-3 px-2 font-semibold ${statusColor}`}>{status}</td>
-                    <td className="py-3 px-2 font-bold">{score}/100</td>
-                    <td className="py-3 px-2 font-bold">{rating}/5.0</td>
-                    <td
-                      className={`py-3 px-2 font-semibold ${feedbackColor}`}
-                      onClick={() => {
-                        if (feedback !== "Sent") setSelectedCandidate(c);
+            <div className="flex flex-wrap gap-4 justify-end items-center">
+              <button
+                onClick={handleDownload}
+                className="px-4 rounded-md mr-5 bg-[#1976D2] text-white text-sm flex items-center gap-3 hover:bg-[#1565C0] transition-colors min-w-[120px] justify-center"
+              >
+                <DownloadIcon />
+                <span>Download</span>
+              </button>
+              <button
+                className="px-4 rounded-md mr-5 bg-[#1976D2] text-white text-sm flex items-center gap-3 hover:bg-[#1565C0] transition-colors min-w-[120px] justify-center"
+                onClick={() => setShowForm(true)}
+              >
+                <AddIcon />
+                <span>Add Candidates</span>
+              </button>
+              <button
+                onClick={() => setShowFilterForm(true)}
+                className="px-4 rounded-md border text-gray-400 border-gray-300 text-sm flex items-center gap-3 hover:text-gray-600 hover:border-gray-400 transition-colors min-w-[120px] justify-center"
+              >
+                <FilterIcon />
+                <span>Filter Candidates</span>
+              </button>
+            </div>
+            {showForm && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+                <div className="relative">
+                  <AddCandidateForm
+                    onClose={() => setShowForm(false)}
+                    onCandidateAdded={handleCandidateAdded}
+                  />
+                </div>
+              </div>
+            )}
+            {showFilterForm && (
+              <div className="fixed inset-0 z-50 flex items-start justify-end bg-black bg-opacity-50">
+                <div className="relative mt-[120px] mr-[100px]">
+                  <div className="max-h-[80vh] overflow-y-auto bg-white rounded-lg shadow-xl">
+                    <FilterCandidate
+                      onClose={() => setShowFilterForm(false)}
+                      onApplyFilter={handleFilterApply}
+                      initialFilters={filters}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+            {showEditForm && candidateToEdit && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+                <div className="relative">
+                  <EditCandidateForm
+                    candidateData={candidateToEdit}
+                    onClose={() => setShowEditForm(false)}
+                    onEditCompleted={handleEditCompleted}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="overflow-auto">
+            <table className="min-w-full text-sm border-collapse">
+              <thead className="text-black border-b border-gray-300">
+                <tr>
+                  <th className="text-left py-3 px-2">
+                    <input
+                      type="checkbox"
+                      onChange={handleSelectAll}
+                      checked={isAllSelected && paginatedCandidates.length > 0}
+                      ref={(input) => {
+                        if (input) {
+                          const paginatedIds = paginatedCandidates.map((c) => c._id);
+                          const someSelected = paginatedIds.some((id) => selectedCandidates.includes(id));
+                          const allSelected = paginatedIds.every((id) => selectedCandidates.includes(id));
+                          input.indeterminate = someSelected && !allSelected;
+                        }
                       }}
-                    >
-                      {feedback}
+                    />
+                  </th>
+                  <th className="text-left py-3 px-2">
+                    <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700">
+                      <ChevronDown size={16} />
+                      <span>Name</span>
+                      <ArrowUpDown size={16} />
+                    </div>
+                  </th>
+                  <th className="text-left py-3 px-2">
+                    <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700">
+                      <span>Position</span>
+                      <ArrowUpDown size={16} />
+                    </div>
+                  </th>
+                  <th className="text-left py-3 px-2">
+                    <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700">
+                      <span>Applied Date</span>
+                      <ArrowUpDown size={16} />
+                    </div>
+                  </th>
+                  <th className="text-left py-3 px-2">
+                    <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700">
+                      <span>Status</span>
+                      <ArrowUpDown size={16} />
+                    </div>
+                  </th>
+                  <th className="text-left py-3 px-2">
+                    <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700">
+                      <span>AI Score</span>
+                      <ArrowUpDown size={16} />
+                    </div>
+                  </th>
+                  <th className="text-left py-3 px-2">
+                    <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700">
+                      <span>HR Rating</span>
+                      <ArrowUpDown size={16} />
+                    </div>
+                  </th>
+                  <th className="text-left py-3 px-2">
+                    <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700">
+                      <span>Send Email</span>
+                      <ArrowUpDown size={16} />
+                    </div>
+                  </th>
+                  <th className="py-3 px-2"></th>
+                </tr>
+              </thead>
+              <tbody className="text-gray-700">
+                {loadingCandidates ? (
+                  <tr>
+                    <td colSpan="9" className="text-center py-6 text-gray-500">
+                      Loading candidates...
                     </td>
                   </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+                ) : paginatedCandidates.length === 0 ? (
+                  <tr>
+                    <td colSpan="9" className="text-center py-6 text-gray-500">
+                      No candidates found
+                    </td>
+                  </tr>
+                ) : (
+                  paginatedCandidates.map((c, i) => {
+                    console.log("Candidate data:", c._id); // Debugging log
+                    const status = c.status || "Unreviewed";
+                    const score = c.score ?? Math.floor(Math.random() * 40) + 60;
+                    const rating = c.rating ?? "0.0";
+                    const feedback = c.feedback ?? "Need Review";
+                    const statusColor = status === "Reviewed" ? "text-green-600" : "text-red-500";
+                    const feedbackColor =
+                      feedback === "Sent"
+                        ? "text-green-600"
+                        : feedback === "Need Review"
+                        ? "text-red-500"
+                        : "text-blue-600 underline cursor-pointer";
 
-      {/* {selectedCandidate && (
-        <FeedbackModal
-          isOpen={true}
-          candidate={selectedCandidate}
-          interviewId={selectedCandidate.interviewId}
-          onClose={() => setSelectedCandidate(null)}
-          onSubmit={(data) =>
-            handleFeedbackSubmit({
-              ...data,
-              candidateId: selectedCandidate._id,
-              interviewId: data.interviewId || selectedCandidate.interviewId
-            })
-          }
-        />
-      )} */}
-
-      <div className="flex justify-between items-center mt-6 text-sm text-gray-500">
-        <button
-          onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-          disabled={currentPage === 1}
-          className="hover:underline disabled:opacity-50"
-        >
-          ← Previous
-        </button>
-        <div className="flex gap-2 items-center">
-          {Array.from({ length: Math.ceil(candidates.length / pageSize) }, (_, i) => i + 1)
-            .slice(0, 5)
-            .map((num) => (
-              <button
-                key={num}
-                onClick={() => setCurrentPage(num)}
-                className={`px-3 py-1 rounded-full ${
-                  num === currentPage ? "bg-black text-white" : "hover:bg-gray-200 text-gray-700"
-                }`}
-              >
-                {num}
-              </button>
-            ))}
+                    return (
+                      <tr key={c._id || i} className="border-b border-gray-200 hover:bg-gray-50">
+                        <td className="py-3 px-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCandidates.includes(c._id)}
+                            onChange={() => handleSelectCandidate(c._id)}
+                          />
+                        </td>
+                        <td className="py-3 px-2 flex items-center gap-3">
+                          <img
+                            src={`https://i.pravatar.cc/32?u=${c.name || c.email}`}
+                            alt="avatar"
+                            className="w-8 h-8 rounded-full"
+                          />
+                          <div>
+                        
+                            <Link 
+                                to={`/video-interview/${c._id}`} 
+                                className="font-semibold text-black hover:underline"
+                              >
+                                {c.name}
+                              </Link>
+                            {/* {c.interviews?.[0]?._id ? ( // Gunakan `_id` untuk MongoDB
+                              <Link 
+                                to={`/video-interview/${c.interviews[0]._id}`} 
+                                className="font-semibold text-black hover:underline"
+                              >
+                                {c.name}
+                              </Link>
+                            ) : (
+                              <span className="font-semibold text-black">
+                                {c.name}
+                              </span>
+                            )} */}
+                            <div className="text-xs text-gray-500">{c.email}</div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-2">{c.position}</td>
+                        <td className="py-3 px-2">
+                          {c.appliedDate ? new Date(c.appliedDate).toLocaleDateString() : "-"}
+                        </td>
+                        <td className={`py-3 px-2 font-semibold ${statusColor}`}>{status}</td>
+                        <td className="py-3 px-2 font-bold">{score}/100</td>
+                        <td className="py-3 px-2 font-bold">{rating}/5.0</td>
+                        <td
+                          className={`py-3 px-2 font-semibold ${feedbackColor}`}
+                          onClick={() => {
+                            if (feedback !== "Sent") console.log("Set candidate for feedback email: ", c); // Anda mungkin ingin mengimplementasikan ini
+                          }}
+                        >
+                          {feedback}
+                        </td>
+                        <td className="py-3 px-2 relative">
+                          <div
+                            className={`menu-container-${c._id}`}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <button
+                              onClick={() => setActiveMenu(activeMenu === c._id ? null : c._id)}
+                              className="p-1 rounded-full hover:bg-gray-200"
+                            >
+                              <MoreVertical size={16} />
+                            </button>
+                            {activeMenu === c._id && (
+                              <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
+                                <div
+                                  className="py-1"
+                                  role="menu"
+                                  aria-orientation="vertical"
+                                  aria-labelledby="options-menu"
+                                >
+                                  <button
+                                    onClick={() => handleEditCandidate(c)}
+                                    className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+                                    role="menuitem"
+                                  >
+                                    <Pencil size={16} />
+                                    <span>Edit Candidate</span>
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteCandidate(c)}
+                                    className="flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-gray-100 w-full text-left"
+                                    role="menuitem"
+                                  >
+                                    <Trash2 size={16} />
+                                    <span>Delete Candidate</span>
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex justify-center items-center mt-6 text-sm text-gray-500 space-x-2">
+            <button
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className={`px-3 py-1 hover:underline disabled:opacity-50 ${
+                currentPage > 1 ? "font-bold" : "font-normal"
+              }`}
+            >
+              ← Previous
+            </button>
+            <div className="flex gap-1 items-center">
+              {Array.from({ length: Math.ceil(filteredCandidates.length / pageSize) }, (_, i) => i + 1)
+                .slice(0, 5)
+                .map((num) => (
+                  <button
+                    key={num}
+                    onClick={() => setCurrentPage(num)}
+                    className={`px-3 py-1 rounded-md ${
+                      num === currentPage ? "bg-black text-white" : "hover:bg-gray-200 text-gray-700"
+                    }`}
+                  >
+                    {num}
+                  </button>
+                ))}
+            </div>
+            <button
+              onClick={() =>
+                setCurrentPage((prev) =>
+                  Math.min(prev + 1, Math.ceil(filteredCandidates.length / pageSize))
+                )
+              }
+              disabled={currentPage * pageSize >= filteredCandidates.length}
+              className={`px-3 py-1 hover:underline disabled:opacity-50 ${
+                currentPage * pageSize < filteredCandidates.length ? "font-bold" : "font-normal"
+              }`}
+            >
+              Next →
+            </button>
+          </div>
         </div>
-        <button
-          onClick={() =>
-            setCurrentPage((prev) => Math.min(prev + 1, Math.ceil(candidates.length / pageSize)))
-          }
-          disabled={currentPage * pageSize >= candidates.length}
-          className="hover:underline disabled:opacity-50"
-        >
-          Next →
-        </button>
+        <PartnerFooter />
       </div>
-      <PartnerFooter />
     </div>
   );
 }

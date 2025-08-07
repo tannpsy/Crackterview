@@ -11,7 +11,7 @@ const router = Router();
 const generateToken = (user) => {
     const payload = {
         id: user._id,
-        isHR: user.isHR // SERTAKAN isHR DI PAYLOAD JWT
+        isHR: user.isHR 
     };
     return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '30d' });
 };
@@ -52,7 +52,7 @@ router.post("/signup", async (req, res, next) => {
             _id: user._id,
             username: user.username,
             email: user.email,
-            isHR: user.isHR, 
+            isHR: user.isHR, // <--- TAMBAHKAN INI DI RESPON SIGNUP
             token
         });
 

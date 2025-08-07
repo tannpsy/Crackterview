@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useState, useContext} from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { useAuth } from "./context/AuthContext";
+import { UserContext } from "../usersidefrontend/context/userContext.jsx";
 
 export default function LoginForm() {
   const navigate = useNavigate();
   const { login, authLoading } = useAuth();
+  const { updateUser } = useContext(UserContext);
 
   const [formData, setFormData] = useState({
     username: "",
@@ -26,7 +28,7 @@ export default function LoginForm() {
     e.preventDefault();
 
     try {
-      const res = await fetch("/api/auth/login", {
+      const res = await fetch("http://localhost:5000/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -42,21 +44,54 @@ export default function LoginForm() {
         throw new Error(data.error || "Login failed");
       }
 
-      const userData = data.user || {
+      // Ensure userData has all properties, especially isHR
+      const userData = {
         _id: data._id,
         username: data.username,
         email: data.email,
+        isHR: data.isHR,
       };
 
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(userData));
 
       toast.success("Login successful!");
-      navigate("/dashboard");
+
+      if (userData.isHR) {
+        return navigate("/hr/dashboard");
+      }
+
+      // Else: regular user
+      const userSideRes = await fetch("http://localhost:5000/user/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: formData.username,
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const userSideData = await userSideRes.json();
+
+      if (!userSideRes.ok) {
+        throw new Error("User-side login failed.");
+      }
+
+      localStorage.setItem("user_token", userSideData.token);
+      localStorage.setItem("user_data", JSON.stringify(userSideData));
+      updateUser({
+        ...userSideData.user, // your user info (username, email, id, etc.)
+        token: userSideData.token, // JWT token
+      });
+
+      return navigate("/user/dashboard");
+
     } catch (err) {
       alert(err.message);
     }
   };
+
 
   const handleGoogleLogin = () => {
     window.location.href = "http://localhost:5000/api/auth/login/google";

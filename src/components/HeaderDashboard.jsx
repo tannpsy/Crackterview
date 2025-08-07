@@ -28,7 +28,6 @@ export default function DashboardHeader({ notifications = [] }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // 🔹 Render Avatar
   const renderAvatar = () => {
     const initial =
       user?.username?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "U";
@@ -39,7 +38,6 @@ export default function DashboardHeader({ notifications = [] }) {
     );
   };
 
-  // 🔹 Render Dropdown Menu
   const renderMenu = () =>
     menuOpen && (
       <div className="absolute right-0 mt-2 w-48 bg-white border rounded shadow-lg z-50">
@@ -56,7 +54,6 @@ export default function DashboardHeader({ notifications = [] }) {
       </div>
     );
 
-  // 🔹 Render Notifications Modal
   const renderNotificationsModal = () =>
     notifOpen && (
       <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
@@ -93,16 +90,20 @@ export default function DashboardHeader({ notifications = [] }) {
 
   return (
     <>
-      <header className="flex items-center justify-between bg-white px-6 py-3 shadow">
+      <header className="grid grid-cols-[1fr_auto_1fr] items-center bg-white px-6 py-3 shadow">
         <Link
           to="/dashboard"
-          className="text-xl font-bold text-crackterview-black"
+          className="text-3xl font-bold text-crackterview-black"
         >
           Crackterview
         </Link>
+ 
+        <h1 className="text-2xl font-bold text-black font-montserrat">
+          Dashboard
+        </h1>
 
-        <div className="flex items-center space-x-4">
-          {/* 🔔 Notifications Button */}
+        <div className="flex justify-end items-center space-x-4">
+
           <button
             onClick={() => setNotifOpen(true)}
             className="relative w-[30px] h-[30px] flex-shrink-0 hover:opacity-80 transition-opacity"
@@ -119,7 +120,6 @@ export default function DashboardHeader({ notifications = [] }) {
             )}
           </button>
 
-          {/* 🔹 Authenticated User Menu */}
           {isAuthenticated ? (
             <div className="relative" ref={menuRef}>
               <button

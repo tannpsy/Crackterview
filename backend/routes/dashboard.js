@@ -3,7 +3,7 @@ import { Router } from "express";
 import { isAuthenticated, isHR } from "../validators/auth.validator.js";
 import Candidate from "../models/Candidate.js";
 import Interview from "../models/Interview.js";
-import mongoose from "mongoose"; // Tetap pertahankan mongoose jika digunakan di tempat lain
+import mongoose from "mongoose"; 
 import multer from 'multer';
 import { uploadFileLocally } from '../utils/fileUploadService.js';
 
@@ -14,6 +14,83 @@ const upload = multer({
     storage: multer.memoryStorage(), // Menyimpan file di memori sebagai buffer
     limits: { fileSize: 50 * 1024 * 1024 } // Batas ukuran file 50 MB
 });
+
+// @route PUT /api/dashboard/candidates/:id
+// @desc Update an existing candidate and optionally their interview recording
+// @access Private (HR only)
+router.put(
+  '/candidates/:id',
+  isAuthenticated,
+  isHR,
+  upload.single('recording'),
+  async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user._id;
+      const { name, email, position, interviewType, phoneNumber } = req.body;
+      const recordingFile = req.file;
+
+      const candidate = await Candidate.findOne({ _id: id, createdBy: userId });
+
+      if (!candidate) {
+        return res.status(404).json({ message: "Candidate not found or you do not have permission to edit." });
+      }
+
+      // Perbarui data kandidat
+      candidate.name = name || candidate.name;
+      candidate.email = email || candidate.email;
+      candidate.position = position || candidate.position;
+      candidate.phoneNumber = phoneNumber || candidate.phoneNumber;
+      
+      // Jika ada file baru diunggah, perbarui data interview juga
+      if (recordingFile) {
+        const uniqueFileName = `${Date.now()}-${recordingFile.originalname.replace(/\s/g, '_')}`;
+        let recordingUrl;
+        
+        try {
+          recordingUrl = await uploadFileLocally(recordingFile.buffer, uniqueFileName);
+        } catch (uploadError) {
+          console.error("Error during file re-upload:", uploadError);
+          return res.status(500).json({ message: "Failed to upload new interview recording.", error: uploadError.message });
+        }
+        
+        // Asumsi kandidat hanya memiliki satu interview atau kita ingin update yang terakhir
+        const latestInterview = await Interview.findOne({ candidateId: id, userId: userId }).sort({ createdAt: -1 });
+
+        if (latestInterview) {
+          
+          latestInterview.interviewType = interviewType || latestInterview.interviewType;
+          latestInterview.recordingUrl = recordingUrl;
+          latestInterview.recordingType = recordingFile.mimetype.startsWith('video') ? 'video' : 'audio';
+          latestInterview.processStatus = 'Uploaded'; // Set status kembali ke Uploaded untuk diproses ulang
+          
+          await latestInterview.save();
+        } else {
+          const newInterview = await Interview.create({
+            userId,
+            candidateId: candidate._id,
+            interviewType: interviewType || 'unknown',
+            recordingUrl,
+            recordingType: recordingFile.mimetype.startsWith('video') ? 'video' : 'audio',
+            processStatus: 'Uploaded',
+          });
+          candidate.interviews.push(newInterview._id);
+        }
+      }
+      
+      await candidate.save();
+
+      res.json({
+        message: "Candidate and interview details updated successfully.",
+        candidate,
+      });
+
+    } catch (error) {
+      console.error("Error updating candidate:", error);
+      next(error);
+    }
+  }
+);
 
 // @route GET /api/dashboard/stats
 // @desc Get dashboard statistics (Total Applicants, Total Interviews, Total Responses, Need Response)
@@ -31,7 +108,7 @@ router.get('/stats', isAuthenticated, isHR, async (req, res, next) => {
 
         const totalResponses = await Interview.countDocuments({
             userId: userId,
-            processStatus: 'HR Reviewed', // Atau 'Analysis Complete' DAN hrFeedbackProvided: true
+            processStatus: 'HR Reviewed', 
             hrFeedbackProvided: true
         });
 
@@ -186,7 +263,6 @@ router.post(
                 return res.status(400).json({ message: "Candidate with this email already exists." });
             }
 
-            // 1. Simpan file secara lokal
             const uniqueFileName = `${Date.now()}-${recordingFile.originalname.replace(/\s/g, '_')}`;
             let recordingUrl;
             try {
@@ -196,7 +272,6 @@ router.post(
                 return res.status(500).json({ message: "Failed to upload interview recording.", error: uploadError.message });
             }
 
-            // 2. Buat Kandidat Baru
             let newCandidate = await Candidate.create({
                 name,
                 email,
@@ -205,12 +280,9 @@ router.post(
                 applicationStatus: 'Interviewed'
             });
 
-            // Simulasi AI Score dan Feedback untuk respons langsung (Ini hanya dummy!)
-            // Di lingkungan nyata, ini akan diisi oleh proses background setelah analisis
-            const dummyAiScore = Math.floor(Math.random() * (95 - 60 + 1)) + 60; // Skor acak antara 60-95
+            const dummyAiScore = Math.floor(Math.random() * (95 - 60 + 1)) + 60; 
             const dummyAiFeedback = "Initial AI analysis pending, but candidate profile looks promising.";
 
-            // 3. Buat Entri Interview Baru
             const newInterview = await Interview.create({
                 userId,
                 candidateId: newCandidate._id,
@@ -218,11 +290,10 @@ router.post(
                 recordingUrl,
                 recordingType: recordingFile.mimetype.startsWith('video') ? 'video' : 'audio',
                 processStatus: 'Uploaded',
-                overallAiScore: dummyAiScore,      // <--- TAMBAHKAN INI (DUMMY)
-                overallAiFeedback: dummyAiFeedback // <--- TAMBAHKAN INI (DUMMY)
+                overallAiScore: dummyAiScore,      
+                overallAiFeedback: dummyAiFeedback 
             });
 
-            // 4. Update Kandidat dengan ID Interview dan ambil dokumen terbaru
             newCandidate = await Candidate.findByIdAndUpdate(
                 newCandidate._id,
                 { $push: { interviews: newInterview._id } },
