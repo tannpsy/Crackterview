@@ -67,11 +67,11 @@ This platform is built for **Recruiters & Industries** and aims to:
 
 | Name                   | Role(s)                                         |
 |------------------------|-------------------------------------------------|
-| **Giovaldi Ramadhan**  | 🧭 Project Manager & Fullstack Engineer         |
+| **Giovaldi Ramadhan**  | 🧭 Project Manager, Back End & AI Engineer         |
 | **Frensen Salim**      | 🎨 UI/UX Designer                               |
-| **Dhruv Menghani**     | ☁️ Cloud Engineer & Front End Engineer         |
+| **Dhruv Menghani**     | ☁️ Front End Engineer         |
 | **Intan Kumala Pasya** | 💻 Front End Engineer                           |
-| **Davina Amarina**     | 🛠️ Back End Engineer                            |
+| **Davina Amarina**     | 🛠️ Back End & AI Engineer                            |
 
 ---
 
