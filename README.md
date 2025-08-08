@@ -34,6 +34,28 @@ This platform is built for **Recruiters & Industries** and aims to:
 
 ---
 
+## ⚙️ Project Setup
+
+1. Clone or download the .zip folder of this repository and open it in your chosen code editor
+2. Open your chosen code editor's terminal
+3. npm install in the root project folder
+4. npm install react-router-dom react-hot-toast lucide-react 
+5. Navigate to the backend directory and npm install as well
+6. npm install mongoose multer nodemailer jsonwebtoken bcryptjs fluent-ffmpeg fmpeg-static openai 
+
+
+---
+
+## ▶️ How to Run
+
+1. Open your chosen code editor's terminal
+2. npm run dev in the project root
+3. Navigate to the backend folder (cd backend)
+4. Open a new terminal
+5. npm run dev in the backend folder directory as well
+
+---
+
 ## 👥 Team & Responsibilities
 
 | Name                   | Role(s)                                         |
