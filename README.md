@@ -2,7 +2,7 @@
 
 An **AI-powered interview platform** designed to simulate real job interviews, assess candidate profiles, and provide real-time feedback — supporting HR departments in making informed decisions aligned with modern industry hiring standards.
 
----
+---    
 
 ## 🌟 Overview
 
