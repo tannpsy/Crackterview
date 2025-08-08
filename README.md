@@ -30,7 +30,9 @@ This platform is built for **Recruiters & Industries** and aims to:
 - **Frontend**: Vite React.js, Tailwind CSS  
 - **Backend**: Node.js, Express.js, MongoDB (Database)
 - **Authentication**: Google Auth 
-- **AI Integration**: Voice to Text using Gemini
+- **AI Integration**: Voice to Text using OpenAI Whisper, Text Summary Analysis and Rating using Quen, Interview Practice Questions Generator & Chatbot using Gemini
+  - **Purpose of AI Integration**: Voice to Text using OpenAI Whisper allows Quen to analyze any recorded interview in video/audio format, Text Summary Analysis is mandatory for the feature that helps assist HR admins in                                    giving feedback to each interview candidates quicker, Interview Practice Questions Generator using Gemini helps candidate users in practicing for their desired position(s), and Chatbot
+                                   using Gemini assists users in realtime in case they need further inquiries.
 
 ---
 
