@@ -34,6 +34,12 @@ This platform is built for **Recruiters & Industries** and aims to:
 
 ---
 
+## ▶️ How to Run
+
+1. npm run dev in the project root
+2. 
+
+
 ## 👥 Team & Responsibilities
 
 | Name                   | Role(s)                                         |
