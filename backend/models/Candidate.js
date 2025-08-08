@@ -38,11 +38,31 @@ const CandidateSchema = new Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Interview'
         }],
-        hrRating: { // Rating HR, ini akan menjadi rata-rata dari semua hrRating wawancara atau rating dari interview terakhir yang direview HR
-            type: Number,
-            min: 0,
-            max: 5,
-            default: 0
+        hrRatings: {
+            'Fit for the Position': {
+                type: Number,
+                min: 0,
+                max: 5,
+                default: 0,
+            },
+            'Culture Fit': {
+                type: Number,
+                min: 0,
+                max: 5,
+                default: 0,
+            },
+            'Motivation': {
+                type: Number,
+                min: 0,
+                max: 5,
+                default: 0,
+            },
+            'Future Potential': {
+                type: Number,
+                min: 0,
+                max: 5,
+                default: 0,
+            },
         },
         // hrFeedbackSent: { // Ini akan dihapus/diganti karena status Reviewed/Unreviewed di dashboard
         //     type: Boolean,

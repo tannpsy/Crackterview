@@ -1,5 +1,8 @@
+// src/frontend/VideoInterview.jsx
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
+import axios from "axios";
+import { toast } from "react-hot-toast";
 import {
   Play,
   SkipForward,
@@ -8,7 +11,7 @@ import {
   PictureInPicture2,
   Airplay,
   Maximize,
-  Loader,
+  FileText,
   Star,
 } from "lucide-react";
 import { Header } from "../components/Header";
@@ -93,6 +96,8 @@ export default function VideoInterview() {
     motivation: 0,
     futurePotential: 0,
   });
+  const [showTranscription, setShowTranscription] = useState(false);
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
 
   const handleRatingChange = (category, newRating) => {
     setRatings((prevRatings) => ({
@@ -112,36 +117,82 @@ export default function VideoInterview() {
     }
   };
 
+  const handleSaveFeedback = async () => {
+    setIsSubmittingFeedback(true);
+    try {
+      await axios.put(`/api/dashboard/interviews/${interviewId}/feedback`, {
+        hrRating: (Object.values(ratings).reduce((sum, current) => sum + current, 0) / Object.values(ratings).length).toFixed(1),
+        hrFeedback: feedbackNote,
+        hrRatings: ratings,
+        status: "Reviewed", 
+      }, { withCredentials: true });
+      toast.success("Feedback saved successfully!");
+    } catch (err) {
+      console.error("Failed to save feedback", err);
+      toast.error("Failed to save feedback.");
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  };
+
+  const handleSendEmail = async () => {
+    setIsSubmittingFeedback(true);
+    try {
+      await axios.post(`/api/dashboard/interviews/${interviewId}/send-email`, {
+        hrFeedback: feedbackNote,
+      }, { withCredentials: true });
+      toast.success("Feedback email sent successfully!");
+    } catch (err) {
+      console.error("Failed to send feedback email", err);
+      toast.error("Failed to send feedback email.");
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  };
+
   useEffect(() => {
     async function fetchInterview() {
-      try {
-        const res = await fetch(`/api/interviews/${interviewId}`);
-        if (!res.ok) {
-          const text = await res.text();
-          console.error("Non-200 response:", text);
-          throw new Error(`Server responded with ${res.status}`);
+        try {
+            const res = await axios.get(`/api/interviews/${interviewId}`, { withCredentials: true });
+            const data = res.data;
+            setInterview(data);
+            if (data.hrNotes) {
+              setFeedbackNote(data.hrNotes);
+            }
+            if (data.hrRatings) {
+              setRatings(data.hrRatings);
+            }
+        } catch (err) {
+            console.error("Failed to fetch interview data", err);
+            toast.error("Failed to load interview data.");
+        } finally {
+            setLoading(false);
         }
-
-        const data = await res.json();
-        setInterview(data);
-      } catch (err) {
-        console.error("Failed to fetch interview data", err);
-      } finally {
-        setLoading(false);
-      }
     }
-
-    fetchInterview();
+      fetchInterview();
   }, [interviewId]);
 
   if (loading) {
     return <div className="text-center mt-20">Loading interview data...</div>;
   }
 
-  const { candidateId: candidate, overallAiScore, overallAiFeedback, recordingUrl, aiScores } = interview;
+  if (!interview) {
+    return <div className="text-center mt-20">Interview not found.</div>;
+  }
+
+  const { 
+    candidateId: candidate, 
+    overallAiScore, 
+    overallAiFeedback, 
+    recordingUrl,
+    aiAnalysisResult,
+    transcription
+  } = interview;
+  
+  const aiScores = aiAnalysisResult?.scores || {};
+
   const appliedDate = new Date(candidate?.appliedDate).toLocaleDateString();
   const videoSrc = recordingUrl || null;
-  const allAiScores = aiScores || {};
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-100">
@@ -193,7 +244,6 @@ export default function VideoInterview() {
                   )}
                 </div>
 
-                {/* Center Play Button Overlay */}
                 <div
                   className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${
                     isPlaying ? "opacity-0 hover:opacity-100" : "opacity-100"
@@ -207,7 +257,6 @@ export default function VideoInterview() {
                   </div>
                 </div>
 
-                {/* Bottom Controls */}
                 <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between p-4 bg-black/30 text-white">
                   <button onClick={handlePlayClick}><Play /></button>
                   <SkipForward />
@@ -262,28 +311,71 @@ export default function VideoInterview() {
                 <div className="min-h-[200px] w-full rounded-md border border-gray-300 p-3 text-sm leading-relaxed text-gray-600">{overallAiFeedback}</div>
               </div>
               <div className="flex justify-center pt-4">
-                <button className="flex items-center gap-3 rounded-xl bg-black px-6 py-2 font-bold text-white shadow-lg transition-colors hover:bg-gray-800">
-                  <Loader className="h-5 w-5" />
-                  <span>Load More</span>
+                <button
+                  onClick={() => setShowTranscription(!showTranscription)}
+                  className="flex items-center gap-3 rounded-xl bg-black px-6 py-2 font-bold text-white shadow-lg transition-colors hover:bg-gray-800"
+                >
+                  <FileText className="h-5 w-5" />
+                  <span>{showTranscription ? 'Hide Transcription' : 'Show Transcription'}</span>
                 </button>
               </div>
               <div>
                 <label className="mb-4 block text-sm font-bold text-black">AI Score</label>
                 <div className="mb-6 grid grid-cols-3 gap-4">
-                  <CircularProgress percentage={overallAiScore} label="Overall" value={`${overallAiScore}%`} />
-                  <CircularProgress percentage={aiScores?.professionalismScore} label="Professionalism" value={`${aiScores?.professionalismScore || 0}%`} />
-                  <CircularProgress percentage={aiScores?.criticalThinkingScore} label="Critical Thinking" value={`${aiScores?.criticalThinkingScore || 0}%`} />
-                  <CircularProgress percentage={aiScores?.communicationScore} label="Communication" value={`${aiScores?.communicationScore || 0}%`} />
-                  <CircularProgress percentage={aiScores?.teamworkScore} label="Teamwork" value={`${aiScores?.teamworkScore || 0}%`} />
-                  <CircularProgress percentage={aiScores?.leadershipScore} label="Leadership" value={`${aiScores?.leadershipScore || 0}%`} />
+                  <CircularProgress 
+                      percentage={overallAiScore || 0} 
+                      label="Overall" 
+                      value={`${overallAiScore || 0}%`} 
+                  />
+                  <CircularProgress 
+                      percentage={aiScores?.professionalismScore || 0} 
+                      label="Professionalism" 
+                      value={`${aiScores?.professionalismScore || 0}%`} 
+                  />
+                  <CircularProgress 
+                      percentage={aiScores?.criticalThinkingScore || 0} 
+                      label="Critical Thinking" 
+                      value={`${aiScores?.criticalThinkingScore || 0}%`} 
+                  />
+                  <CircularProgress 
+                      percentage={aiScores?.communicationScore || 0} 
+                      label="Communication" 
+                      value={`${aiScores?.communicationScore || 0}%`} 
+                  />
+                  <CircularProgress 
+                      percentage={aiScores?.teamworkScore || 0} 
+                      label="Teamwork" 
+                      value={`${aiScores?.teamworkScore || 0}%`} 
+                  />
+                  <CircularProgress 
+                      percentage={aiScores?.leadershipScore || 0} 
+                      label="Leadership" 
+                      value={`${aiScores?.leadershipScore || 0}%`} 
+                  />
                 </div>
+                {showTranscription && (
+                  <div className="rounded-md border border-gray-300 p-3 text-sm leading-relaxed text-gray-600 mt-4 max-h-60 overflow-y-auto">
+                      <h5 className="font-bold mb-2">Transcription</h5>
+                      {transcription || "No transcription available."}
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
           <div className="mt-8 flex justify-end gap-4 mr-12">
-            <button onClick={() => console.log("Saved note:", feedbackNote, "Ratings:", ratings)} className="rounded-xl border border-gray-400 bg-white px-6 py-2 font-bold text-black shadow-lg transition-colors hover:bg-gray-50">Save</button>
-            <button onClick={() => console.log("Send email with note:", feedbackNote, "Ratings:", ratings)} className="rounded-xl bg-blue-600 px-6 py-2 font-bold text-white shadow-lg transition-colors hover:bg-blue-700">Send Email</button>
+            <button 
+              onClick={handleSaveFeedback} 
+              disabled={isSubmittingFeedback}
+              className="rounded-xl border border-gray-400 bg-white px-6 py-2 font-bold text-black shadow-lg transition-colors hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+              {isSubmittingFeedback ? 'Saving...' : 'Save'}
+            </button>
+            <button 
+              onClick={handleSendEmail} 
+              disabled={isSubmittingFeedback}
+              className="rounded-xl bg-blue-600 px-6 py-2 font-bold text-white shadow-lg transition-colors hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+              {isSubmittingFeedback ? 'Sending...' : 'Send Email'}
+            </button>
           </div>
         </div>
       </main>

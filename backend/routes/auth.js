@@ -4,6 +4,7 @@ import passport from "../config/passport.js";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import nodemailer from "nodemailer";
+import { isAuthenticated, isHR } from "../validators/auth.validator.js";
 
 const router = Router();
 
@@ -119,28 +120,132 @@ router.get("/login/google/callback",
 );
 
 // @route POST /auth/send-email
+// const transporter = nodemailer.createTransport({
+//     service: "gmail",
+//     auth: {
+//         user: process.env.EMAIL_USER,
+//         pass: process.env.GOOGLE_APP_PASSWORD
+//     }
+// });
+
+// router.post("/send-email", async (req, res) => {
+//     const { to, subject, text } = req.body;
+//     try {
+//         await transporter.sendMail({
+//             from: process.env.EMAIL_USER,
+//             to,
+//             subject,
+//             text
+//         });
+//         res.json({ success: true });
+//     } catch (err) {
+//         console.error("Error sending email:", err);
+//         res.status(500).json({ success: false, message: err.message });
+//     }
+// });
+
+// ... (your existing routes)
+
+// @route POST /auth/send-email
 const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.GOOGLE_APP_PASSWORD
-    }
+        pass: process.env.GOOGLE_APP_PASSWORD,
+    },
 });
 
-router.post("/send-email", async (req, res) => {
-    const { to, subject, text } = req.body;
+router.post(
+    "/send-email",
+    isAuthenticated,
+    isHR,
+    async (req, res) => {
+        const { interviewId, hrNotes, hrRatings } = req.body;
+        const userId = req.user._id;
+
+        try {
+            // Find the interview and ensure it belongs to the authenticated user
+            const interview = await Interview.findOne({ _id: interviewId, userId: userId });
+
+            if (!interview) {
+                return res.status(404).json({ message: "Interview not found or you do not have permission." });
+            }
+
+            // Calculate the average HR rating
+            const averageHrRating = Object.values(hrRatings).reduce((sum, current) => sum + current, 0) / Object.values(hrRatings).length;
+
+            // Update the interview document with HR feedback
+            interview.hrNotes = hrNotes;
+            interview.hrRating = averageHrRating;
+            interview.hrFeedbackProvided = true;
+            interview.processStatus = "HR Reviewed";
+            await interview.save();
+
+            // Get candidate details to send the email
+            const candidate = await Candidate.findById(interview.candidateId);
+            if (!candidate) {
+                return res.status(404).json({ message: "Candidate not found." });
+            }
+
+            // Construct the email content
+            const subject = "Your Interview Feedback from " + req.user.username;
+            const text = `
+Hello ${candidate.name},
+
+Thank you for participating in the interview for the ${candidate.position} position.
+
+Here is the feedback from our HR team:
+Average HR Rating: ${averageHrRating.toFixed(1)}/5
+
+HR Notes:
+"${hrNotes}"
+
+We will be in touch with you shortly regarding the next steps.
+
+Best regards,
+The ${req.user.username} Team
+`;
+
+            // Send the email using Nodemailer
+            await transporter.sendMail({
+                from: process.env.EMAIL_USER,
+                to: candidate.email,
+                subject,
+                text,
+            });
+
+            res.status(200).json({
+                message: "Feedback saved and email sent successfully.",
+                interview,
+            });
+        } catch (err) {
+            console.error("Error sending email:", err);
+            res.status(500).json({ success: false, message: err.message });
+        }
+    }
+);
+
+router.get('/me', async (req, res) => {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ message: 'No token provided' });
+    }
+
+    const token = authHeader.split(' ')[1];
+
     try {
-        await transporter.sendMail({
-            from: process.env.EMAIL_USER,
-            to,
-            subject,
-            text
-        });
-        res.json({ success: true });
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const user = await User.findById(decoded.id).select('-password');
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        res.json({ user });
     } catch (err) {
-        console.error("Error sending email:", err);
-        res.status(500).json({ success: false, message: err.message });
+        console.error('Token error:', err);
+        res.status(401).json({ message: 'Invalid token' });
     }
 });
-
 export default router;

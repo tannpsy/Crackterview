@@ -57,6 +57,10 @@ const InterviewSchema = new Schema(
             type: Boolean,
             default: false
         },
+        emailSent: {
+            type: Boolean,
+            default: false
+        },
         uploadedAt: { // Waktu wawancara diunggah
             type: Date,
             default: Date.now

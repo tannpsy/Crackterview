@@ -1,3 +1,4 @@
+// src/frontend/Dashboard.jsx
 import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
@@ -29,6 +30,8 @@ export default function Dashboard() {
   const [candidateToEdit, setCandidateToEdit] = useState(null);
   const [selectedCandidates, setSelectedCandidates] = useState([]);
   const [isAllSelected, setIsAllSelected] = useState(false);
+  const [sortBy, setSortBy] = useState("appliedDate");
+  const [sortOrder, setSortOrder] = useState("desc");
 
   const pageSize = 5;
 
@@ -36,7 +39,7 @@ export default function Dashboard() {
     if (isAllSelected) {
       setSelectedCandidates([]);
     } else {
-      setSelectedCandidates(paginatedCandidates.map((c) => c._id));
+      setSelectedCandidates(candidates.map((c) => c._id));
     }
     setIsAllSelected(!isAllSelected);
   };
@@ -63,62 +66,15 @@ export default function Dashboard() {
         await axios.delete(`/api/dashboard/candidates/${candidate._id}`, { withCredentials: true });
         toast.success(`${candidate.name} has been deleted successfully!`);
 
-        setCandidates(candidates.filter(c => c._id !== candidate._id));
-        setCandidateCount(prevCount => prevCount - 1);
-
-        setActiveMenu(null);
-
+        fetchCandidates();
         fetchStats();
 
-        if (paginatedCandidates.length === 1 && currentPage > 1) {
-          setCurrentPage(currentPage - 1);
-        }
       } catch (error) {
         console.error("Failed to delete candidate:", error);
         toast.error("Failed to delete candidate. Please try again.");
       }
     }
   };
-
-  const filteredCandidates = candidates.filter((candidate) => {
-    const query = searchQuery.toLowerCase();
-    const matchesSearch = (
-      (candidate.name && candidate.name.toLowerCase().includes(query)) ||
-      (candidate.position && candidate.position.toLowerCase().includes(query))
-    );
-    const matchesStatus = !filters.status || filters.status === "All" || (candidate.status || "Unreviewed") === filters.status;
-    const matchesFeedback = !filters.feedback || filters.feedback === "All" || (candidate.feedback ?? "Need Review") === filters.feedback;
-    
-    const addOneDay = (dateStr) => {
-      const date = new Date(dateStr);
-      date.setDate(date.getDate() + 1);
-      return date;
-    };
-    
-    const matchesDate =
-    (!filters.startDate || (candidate.appliedDate && new Date(candidate.appliedDate) >= new Date(filters.startDate))) &&
-    (!filters.endDate || (candidate.appliedDate && new Date(candidate.appliedDate) < addOneDay(filters.endDate)));
-
-    return matchesSearch && matchesStatus && matchesFeedback && matchesDate;
-  });
-
-  const paginatedCandidates = filteredCandidates.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
-
-  const calculatedNeedResponse = candidates.filter(
-    (c) => (c.feedback ?? "Need Review") !== "Sent"
-  ).length;
-
-  const mergedStats = [
-    ...stats.filter((s) => s.label !== "Need Review"),
-    {
-      label: "Need Review",
-      value: calculatedNeedResponse,
-      color: "text-[#FF3D00]",
-    },
-  ];
 
   const STAT_STYLE = {
     fontFamily: "DM Sans, -apple-system, Roboto, Helvetica, sans-serif",
@@ -130,13 +86,15 @@ export default function Dashboard() {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch("/api/dashboard/stats", { credentials: "include" });
-      const data = await res.json();
+      const res = await axios.get("/api/dashboard/stats", { withCredentials: true });
+      const data = res.data;
       if (data && typeof data === "object") {
+        // Data 'Need Review' sekarang diambil langsung dari server
         setStats([
           { label: "Total Applicants", value: data.totalApplicants, color: "text-[#1976D2]" },
           { label: "Total Interviews", value: data.totalInterviews, color: "text-black" },
           { label: "Total Responses", value: data.totalResponses, color: "text-[#4CAF50]" },
+          { label: "Need Review", value: data.needReview, color: "text-[#FF3D00]" },
         ]);
       }
     } catch (err) {
@@ -146,11 +104,27 @@ export default function Dashboard() {
 
   const fetchCandidates = useCallback(async () => {
     try {
-      const res = await axios.get("/api/dashboard/candidates", { withCredentials: true });
+      setLoadingCandidates(true);
+      // Construct filter params dynamically
+      const filterParams = new URLSearchParams();
+      if (searchQuery) filterParams.append("keyword", searchQuery);
+
+      // LOGIC PERBAIKAN: Hanya tambahkan parameter jika nilainya ada
+      if (filters.status) filterParams.append("status", filters.status);
+      if (filters.feedback) filterParams.append("feedback", filters.feedback);
+
+      if (filters.startDate) filterParams.append("startDate", filters.startDate);
+      if (filters.endDate) filterParams.append("endDate", new Date(new Date(filters.endDate).setDate(new Date(filters.endDate).getDate() + 1)).toISOString());
+
+      // Fetch candidates with pagination, sorting, and filtering from the backend
+      const res = await axios.get(
+        `/api/dashboard/candidates?page=${currentPage}&pageSize=${pageSize}&sortBy=${sortBy}&sortOrder=${sortOrder}&${filterParams.toString()}`,
+        { withCredentials: true }
+      );
       const data = res.data?.data;
       if (Array.isArray(data)) {
         setCandidates(data);
-        setCandidateCount(data.length);
+        setCandidateCount(res.data.total); // Set total count from the backend
       } else {
         setCandidates([]);
         setCandidateCount(0);
@@ -162,8 +136,7 @@ export default function Dashboard() {
     } finally {
       setLoadingCandidates(false);
     }
-  }, []);
-
+  }, [searchQuery, currentPage, pageSize, sortBy, sortOrder, filters]);
 
   const handleKeyDown = useCallback((e) => {
     if (e.key === "Escape") {
@@ -173,16 +146,35 @@ export default function Dashboard() {
     }
   }, []);
 
-  useEffect(() => {
-    fetchStats();
-    fetchCandidates();
-  }, [fetchCandidates]); // Hapus `filters` dan `searchQuery` dari dependencies karena logika filter sudah di frontend
+  const handleSort = (newSortBy) => {
+    const newSortOrder = sortBy === newSortBy && sortOrder === "asc" ? "desc" : "asc";
+    setSortBy(newSortBy);
+    setSortOrder(newSortOrder);
+    setCurrentPage(1); // Reset to page 1 on sort change
+  };
 
   useEffect(() => {
-    const paginatedIds = paginatedCandidates.map(c => c._id);
+    fetchStats();
+  }, []);
+
+  // src/frontend/Dashboard.jsx
+useEffect(() => {
+  fetchCandidates(searchQuery, filters, currentPage, pageSize, sortBy, sortOrder);
+}, [
+  fetchCandidates,
+  searchQuery,
+  filters, // Add filters to the dependency array
+  currentPage,
+  pageSize,
+  sortBy,
+  sortOrder,
+]);
+
+  useEffect(() => {
+    const paginatedIds = candidates.map(c => c._id);
     const allOnPageSelected = paginatedIds.length > 0 && paginatedIds.every(id => selectedCandidates.includes(id));
     setIsAllSelected(allOnPageSelected);
-  }, [selectedCandidates, paginatedCandidates]);
+  }, [selectedCandidates, candidates]);
 
   useEffect(() => {
     if (showForm || showEditForm || showFilterForm) {
@@ -199,7 +191,6 @@ export default function Dashboard() {
         setActiveMenu(null);
       }
     };
-
     document.addEventListener("click", handleClickOutside);
     return () => document.removeEventListener("click", handleClickOutside);
   }, [activeMenu]);
@@ -207,6 +198,7 @@ export default function Dashboard() {
   const handleCandidateAdded = () => {
     fetchCandidates();
     fetchStats();
+    setShowForm(false);
     setCurrentPage(1);
   };
 
@@ -224,9 +216,9 @@ export default function Dashboard() {
         Position: candidate.position || "",
         "Applied Date": candidate.appliedDate ? new Date(candidate.appliedDate).toLocaleDateString() : "-",
         Status: candidate.status || "Unreviewed",
-        "AI Score": candidate.score ?? "-",
-        "HR Rating": candidate.rating ?? "0.0",
-        "Feedback Status": candidate.feedback ?? "Need Review",
+        "AI Score": candidate.aiScore ?? "-",
+        "HR Rating": candidate.hrRating ?? "0.0",
+        "Feedback Status": candidate.sendFeedbackStatus ?? "Need Review",
       }));
 
       const workbook = XLSX.utils.book_new();
@@ -253,13 +245,20 @@ export default function Dashboard() {
 
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
-    setCurrentPage(1);
+    setCurrentPage(1); // Reset to page 1 on search change
   };
 
   const handleFilterApply = (newFilters) => {
     setFilters(newFilters);
-    setCurrentPage(1);
+    setCurrentPage(1); // Reset to page 1 on filter change
     setShowFilterForm(false);
+  };
+
+  const getSortIcon = (column) => {
+    if (sortBy === column) {
+      return sortOrder === "asc" ? <ChevronDown size={16} className="rotate-180" /> : <ChevronDown size={16} />;
+    }
+    return <ArrowUpDown size={16} />;
   };
 
   return (
@@ -273,7 +272,7 @@ export default function Dashboard() {
               Your Stats
             </h1>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
-              {mergedStats.map((stat, index) => (
+              {stats.map((stat, index) => (
                 <div key={index} className="text-center lg:text-left">
                   <div className="text-[20px] font-bold text-[#979797] mb-4" style={STAT_STYLE}>
                     {stat.label}
@@ -377,10 +376,10 @@ export default function Dashboard() {
                     <input
                       type="checkbox"
                       onChange={handleSelectAll}
-                      checked={isAllSelected && paginatedCandidates.length > 0}
+                      checked={isAllSelected && candidates.length > 0}
                       ref={(input) => {
                         if (input) {
-                          const paginatedIds = paginatedCandidates.map((c) => c._id);
+                          const paginatedIds = candidates.map((c) => c._id);
                           const someSelected = paginatedIds.some((id) => selectedCandidates.includes(id));
                           const allSelected = paginatedIds.every((id) => selectedCandidates.includes(id));
                           input.indeterminate = someSelected && !allSelected;
@@ -389,46 +388,45 @@ export default function Dashboard() {
                     />
                   </th>
                   <th className="text-left py-3 px-2">
-                    <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700">
-                      <ChevronDown size={16} />
+                    <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700" onClick={() => handleSort("name")}>
+                      {getSortIcon("name")}
                       <span>Name</span>
-                      <ArrowUpDown size={16} />
                     </div>
                   </th>
                   <th className="text-left py-3 px-2">
-                    <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700">
+                    <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700" onClick={() => handleSort("position")}>
                       <span>Position</span>
-                      <ArrowUpDown size={16} />
+                      {getSortIcon("position")}
                     </div>
                   </th>
                   <th className="text-left py-3 px-2">
-                    <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700">
+                    <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700" onClick={() => handleSort("appliedDate")}>
                       <span>Applied Date</span>
-                      <ArrowUpDown size={16} />
+                      {getSortIcon("appliedDate")}
                     </div>
                   </th>
                   <th className="text-left py-3 px-2">
-                    <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700">
+                    <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700" onClick={() => handleSort("status")}>
                       <span>Status</span>
-                      <ArrowUpDown size={16} />
+                      {getSortIcon("status")}
                     </div>
                   </th>
                   <th className="text-left py-3 px-2">
-                    <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700">
+                    <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700" onClick={() => handleSort("aiScore")}>
                       <span>AI Score</span>
-                      <ArrowUpDown size={16} />
+                      {getSortIcon("aiScore")}
                     </div>
                   </th>
                   <th className="text-left py-3 px-2">
-                    <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700">
+                    <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700" onClick={() => handleSort("hrRating")}>
                       <span>HR Rating</span>
-                      <ArrowUpDown size={16} />
+                      {getSortIcon("hrRating")}
                     </div>
                   </th>
                   <th className="text-left py-3 px-2">
-                    <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700">
+                    <div className="flex items-center gap-2 cursor-pointer hover:text-gray-700" onClick={() => handleSort("sendFeedbackStatus")}>
                       <span>Send Email</span>
-                      <ArrowUpDown size={16} />
+                      {getSortIcon("sendFeedbackStatus")}
                     </div>
                   </th>
                   <th className="py-3 px-2"></th>
@@ -441,26 +439,25 @@ export default function Dashboard() {
                       Loading candidates...
                     </td>
                   </tr>
-                ) : paginatedCandidates.length === 0 ? (
+                ) : candidates.length === 0 ? (
                   <tr>
                     <td colSpan="9" className="text-center py-6 text-gray-500">
                       No candidates found
                     </td>
                   </tr>
                 ) : (
-                  paginatedCandidates.map((c, i) => {
-                    console.log("Candidate data:", c._id); // Debugging log
+                  candidates.map((c, i) => {
                     const status = c.status || "Unreviewed";
-                    const score = c.score ?? Math.floor(Math.random() * 40) + 60;
-                    const rating = c.rating ?? "0.0";
-                    const feedback = c.feedback ?? "Need Review";
+                    const score = c.aiScore ?? "-";
+                    const rating = c.hrRating ?? "0.0";
+                    const feedback = c.sendFeedbackStatus ?? "Need Review";
                     const statusColor = status === "Reviewed" ? "text-green-600" : "text-red-500";
                     const feedbackColor =
                       feedback === "Sent"
                         ? "text-green-600"
                         : feedback === "Need Review"
-                        ? "text-red-500"
-                        : "text-blue-600 underline cursor-pointer";
+                          ? "text-red-500"
+                          : "text-blue-600 underline cursor-pointer";
 
                     return (
                       <tr key={c._id || i} className="border-b border-gray-200 hover:bg-gray-50">
@@ -478,25 +475,12 @@ export default function Dashboard() {
                             className="w-8 h-8 rounded-full"
                           />
                           <div>
-                        
-                            <Link 
-                                to={`/video-interview/${c._id}`} 
-                                className="font-semibold text-black hover:underline"
-                              >
-                                {c.name}
-                              </Link>
-                            {/* {c.interviews?.[0]?._id ? ( // Gunakan `_id` untuk MongoDB
-                              <Link 
-                                to={`/video-interview/${c.interviews[0]._id}`} 
-                                className="font-semibold text-black hover:underline"
-                              >
-                                {c.name}
-                              </Link>
-                            ) : (
-                              <span className="font-semibold text-black">
-                                {c.name}
-                              </span>
-                            )} */}
+                            <Link
+                              to={c._id ? `/video-interview/${c._id}` : '#'}
+                              className="font-semibold text-black hover:underline"
+                            >
+                              {c.name}
+                            </Link>
                             <div className="text-xs text-gray-500">{c.email}</div>
                           </div>
                         </td>
@@ -505,12 +489,12 @@ export default function Dashboard() {
                           {c.appliedDate ? new Date(c.appliedDate).toLocaleDateString() : "-"}
                         </td>
                         <td className={`py-3 px-2 font-semibold ${statusColor}`}>{status}</td>
-                        <td className="py-3 px-2 font-bold">{score}/100</td>
-                        <td className="py-3 px-2 font-bold">{rating}/5.0</td>
+                        <td className="py-3 px-2 font-bold">{score !== "-" ? `${score}/100` : "-"}</td>
+                        <td className="py-3 px-2 font-bold">{rating !== "0.0" ? `${rating}/5.0` : "-"}</td>
                         <td
                           className={`py-3 px-2 font-semibold ${feedbackColor}`}
                           onClick={() => {
-                            if (feedback !== "Sent") console.log("Set candidate for feedback email: ", c); // Anda mungkin ingin mengimplementasikan ini
+                            if (feedback !== "Sent") console.log("Set candidate for feedback email: ", c);
                           }}
                         >
                           {feedback}
@@ -566,36 +550,35 @@ export default function Dashboard() {
             <button
               onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
               disabled={currentPage === 1}
-              className={`px-3 py-1 hover:underline disabled:opacity-50 ${
-                currentPage > 1 ? "font-bold" : "font-normal"
-              }`}
+              className={`px-3 py-1 hover:underline disabled:opacity-50 ${currentPage > 1 ? "font-bold" : "font-normal"}`}
             >
               ← Previous
             </button>
             <div className="flex gap-1 items-center">
-              {Array.from({ length: Math.ceil(filteredCandidates.length / pageSize) }, (_, i) => i + 1)
-                .slice(0, 5)
+              {Array.from({ length: Math.ceil(candidateCount / pageSize) }, (_, i) => i + 1)
+                .slice(0, 5) // Batasi pagination bar ke 5, bisa disesuaikan
                 .map((num) => (
                   <button
                     key={num}
                     onClick={() => setCurrentPage(num)}
-                    className={`px-3 py-1 rounded-md ${
-                      num === currentPage ? "bg-black text-white" : "hover:bg-gray-200 text-gray-700"
-                    }`}
+                    className={`px-3 py-1 rounded-md ${num === currentPage ? "bg-black text-white" : "hover:bg-gray-200 text-gray-700"}`}
                   >
                     {num}
                   </button>
                 ))}
+              {Math.ceil(candidateCount / pageSize) > 5 && (
+                <span>...</span>
+              )}
             </div>
             <button
               onClick={() =>
                 setCurrentPage((prev) =>
-                  Math.min(prev + 1, Math.ceil(filteredCandidates.length / pageSize))
+                  Math.min(prev + 1, Math.ceil(candidateCount / pageSize))
                 )
               }
-              disabled={currentPage * pageSize >= filteredCandidates.length}
+              disabled={currentPage * pageSize >= candidateCount}
               className={`px-3 py-1 hover:underline disabled:opacity-50 ${
-                currentPage * pageSize < filteredCandidates.length ? "font-bold" : "font-normal"
+                currentPage * pageSize < candidateCount ? "font-bold" : "font-normal"
               }`}
             >
               Next →
