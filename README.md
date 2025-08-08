@@ -19,7 +19,7 @@ This platform is built for **Recruiters & Industries** and aims to:
 
 | Feature                     | Description                                                                                         | Benefits                                                                                                 |
 |----------------------------|-----------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------|
-| **One-way Interview Video Call** | Automated interview questions shown when a candidate applies.                                      | • Prevents interviewer fatigue bias  <br> • Enables asynchronous interviews                               |
+| **Candidate Management System** | The list of interviewed candidates                                                                  | • Speed up post-interview coordinator  <br> • Supports quicker decisions                               |
 | **AI Voice-to-Text Transcript**  | Transcribes interviews and highlights key answers.                                                 | • Saves time from manual note-taking <br> • Helps recall specific responses                               |
 | **AI Interview Evaluation**      | Evaluates transcripts using AI to assess role fit.                                                 | • Speeds up hiring decisions <br> • Assists recruiters with structured, consistent evaluations            |
 
