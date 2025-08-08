@@ -34,11 +34,21 @@ This platform is built for **Recruiters & Industries** and aims to:
 
 ---
 
+## ⚙️ Project Setup
+
+1. npm install in the root project folder
+2. npm install react-router-dom react-hot-toast lucide-react 
+3. Navigate to the backend directory and npm install as well
+
+
+---
+
 ## ▶️ How to Run
 
 1. npm run dev in the project root
 2. 
 
+---
 
 ## 👥 Team & Responsibilities
 
